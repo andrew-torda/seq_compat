@@ -1,0 +1,81 @@
+slice_size 25 real 64.63 user 376.49 sys 32.81 RSS 21808
+
+slice_size 30 real 64.86 user 383.96 sys 32.66 RSS 27616
+
+slice_size 40 real 63.78 user 381.31 sys 31.90 RSS 29636
+
+slice_size 45 real 63.79 user 372.95 sys 30.22 RSS 21736
+
+slice_size 50 real 63.25 user 372.79 sys 30.84 RSS 29468
+
+slice_size 55 real 62.78 user 363.13 sys 31.90 RSS 23816
+
+slice_size 60 real 62.80 user 358.10 sys 29.93 RSS 22632
+
+slice_size 62 real 62.87 user 359.78 sys 30.35 RSS 20936
+
+slice_size 64 real 62.48 user 360.68 sys 29.62 RSS 23612
+
+slice_size 70 real 62.25 user 366.86 sys 31.39 RSS 22440
+
+slice_size 100 real 62.82 user 374.15 sys 32.42 RSS 22848
+
+slice_size 25 real 64.21 user 375.44 sys 30.66 RSS 28932
+
+slice_size 30 real 65.20 user 384.29 sys 31.67 RSS 26320
+
+slice_size 40 real 63.76 user 378.26 sys 31.99 RSS 27564
+
+slice_size 45 real 64.26 user 376.02 sys 30.85 RSS 27552
+
+slice_size 50 real 62.88 user 367.86 sys 30.86 RSS 22060
+
+slice_size 55 real 63.00 user 365.42 sys 30.31 RSS 22752
+
+slice_size 60 real 62.74 user 355.46 sys 31.29 RSS 26956
+
+slice_size 100 real 63.40 user 377.10 sys 32.45 RSS 21936
+
+slice_size 40 real 63.78 user 378.73 sys 31.78 RSS 29756
+
+slice_size 41 real 64.54 user 377.90 sys 31.54 RSS 26428
+
+slice_size 42 real 64.22 user 376.26 sys 32.34 RSS 25924
+
+slice_size 43 real 64.08 user 372.35 sys 31.25 RSS 25884
+
+slice_size 44 real 64.25 user 370.75 sys 31.66 RSS 23804
+
+slice_size 45 real 64.53 user 375.27 sys 31.95 RSS 21396
+
+slice_size 46 real 63.98 user 372.12 sys 30.51 RSS 25820
+
+slice_size 47 real 64.14 user 372.96 sys 31.68 RSS 23688
+
+slice_size 48 real 63.48 user 373.47 sys 30.14 RSS 21788
+
+slice_size 49 real 63.22 user 370.40 sys 31.64 RSS 21496
+
+slice_size 50 real 63.09 user 373.25 sys 31.29 RSS 25688
+
+slice_size 40 real 63.73 user 378.45 sys 32.20 RSS 23748
+
+slice_size 41 real 63.38 user 377.85 sys 30.57 RSS 26568
+
+slice_size 42 real 63.52 user 378.25 sys 31.97 RSS 21764
+
+slice_size 43 real 63.88 user 375.01 sys 33.21 RSS 27444
+
+slice_size 44 real 63.38 user 370.02 sys 31.92 RSS 27372
+
+slice_size 45 real 63.69 user 372.81 sys 30.31 RSS 23668
+
+slice_size 46 real 63.52 user 371.92 sys 29.91 RSS 26824
+
+slice_size 47 real 63.40 user 368.68 sys 31.02 RSS 28168
+
+slice_size 48 real 63.32 user 371.26 sys 30.82 RSS 25532
+
+slice_size 49 real 63.41 user 374.29 sys 31.73 RSS 26564
+
+slice_size 50 real 63.23 user 369.53 sys 32.52 RSS 25824

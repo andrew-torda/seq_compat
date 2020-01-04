@@ -1,0 +1,29 @@
+First version without pools
+ 3945.40MB 69.22% 69.22%  3967.90MB 69.61%  pdb/mmcif.stateAtomTable
+ 1158.27MB 20.32% 89.54%  1158.27MB 20.32%  pdb/mmcif.nxtMdl
+and
+    3.26GB     3.26GB    371:		strings[i] = string(t) // This is memory expensive
+         .          .    372:		if i == (sl_siz - 1) {
+         .          .    373:			i = 0
+         .          .    374:			c <- strings
+  597.58MB   597.58MB    375:			strings = make([]string, sl_siz)
+
+
+After converting to bytes
+ 4330.19MB 64.37% 64.37%  4345.19MB 64.60%  pdb/mmcif.stateAtomTable
+ 1252.58MB 18.62% 83.00%  1813.59MB 26.96%  pdb/mmcif.nxtMdl
+    3.31GB     3.31GB    375:		tmp := make ([]byte, len(t))
+         .          .    376:		copy (tmp, t)
+         .          .    377:		strings[i] = tmp
+         .          .    378:
+         .          .    379:		if i == (sl_siz - 1) {
+         .          .    380:			i = 0
+         .          .    381:			c <- strings
+  925.35MB   925.35MB    382:			strings = make([]bSlice, sl_siz)
+
+After using sync.pool
+ 1225.29MB 47.03% 47.03%  1805.30MB 69.29%  pdb/mmcif.nxtMdl
+  421.51MB 16.18% 63.21%   421.51MB 16.18%  pdb/mmcif.getxyz.func1
+  176.07MB  6.76% 69.97%   176.07MB  6.76%  pdb/mmcif.stateAtomTable.func1
+  150.09MB  5.76% 75.73%   150.09MB  5.76%  compress/flate.(*dictDecoder).init (inline)
+  135.51MB  5.20% 80.93%   135.51MB  5.20%  pdb/mmcif.splitCifLine

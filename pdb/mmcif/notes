@@ -1,0 +1,26 @@
+best resolution: refine.ls_d_res_high
+   or 
+_reflns.d_resolution_high
+threemodel.cif
+total lines 768 atoms
+52 CA
+chain B 171 lines
+
+* chimeraX doc
+http://www.rbvi.ucsf.edu/chimerax/docs/devel/mmcif.html
+
+
+* split with quotes
+https://play.golang.org/p/ztqfYiPSlv
+
+
+** structure
+** Item lists
+This could be the set of items on a line, but it also handles the case of multi-line items.
+** Magic characters
+A word can begin with a quote or double quote. C' is written as "C'".
+** keywords
+ + The chimeraX page lists their philosophy.
+ + ATOM and HETATM can be ignored
+* Code notes
+

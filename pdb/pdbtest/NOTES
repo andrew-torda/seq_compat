@@ -1,0 +1,9 @@
+I started with a pdb reader that read mmcif files.
+Eventually, I will need to read old format files.
+The two are so different, I am going to make
+     pdb
+  /      \
+ /        \
+pdbold    mmcif
+
+A caller should use the pdb package. Internally, it will decide if we want old or new format.

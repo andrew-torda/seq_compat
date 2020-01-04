@@ -1,0 +1,3 @@
+			for i, _ := range x { // there is no advantage calling make()
+				x[i] = make([]byte, line_siz)
+			}

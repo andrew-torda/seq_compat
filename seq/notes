@@ -1,0 +1,9 @@
+Things I tried in seq.go
+	w := func (c rune) bool {
+		var white = [256]bool { '\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true, '-': true}
+		return white[c]
+}
+ with
+ 	btmp := bytes.Join(bytes.FieldsFunc (p[:], w), nil)
+
+This went slightly slower

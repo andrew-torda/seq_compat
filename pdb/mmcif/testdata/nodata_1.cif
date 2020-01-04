@@ -1,0 +1,12 @@
+# 
+_cell.length_a      1 
+loop_
+_software.name 
+_software.classification 
+_software.version 
+_software.citation_id 
+_software.pdbx_ordinal 
+EPICS-based 'data collection' 'beamline control'    ? 2 
+data        'data collection' 'acquisition systems' ? 3 
+SHARP       phasing           .                     ? 6 
+# 

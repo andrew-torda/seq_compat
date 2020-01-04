@@ -1,0 +1,51 @@
+// this is the version I made by stripping back the library Fields()
+// function
+func fields_fallback(s string, scrtch []string) []string {
+	var asciiSpace = [256]uint8{'\t': 1, '\n': 1, '\v': 1, '\f': 1, '\r': 1, ' ': 1}
+	// First count the fields.
+	// This is an exact count if s is ASCII, otherwise it is an approximation.
+	n := 0
+	wasSpace := 1
+	// setBits is used to track which bits are set in the bytes of s.
+	setBits := uint8(0)
+	for i := 0; i < len(s); i++ {
+		r := s[i]
+		setBits |= r
+		isSpace := int(asciiSpace[r])
+		n += wasSpace & ^isSpace
+		wasSpace = isSpace
+	}
+
+	if setBits < utf8.RuneSelf { // ASCII fast path
+		a := scrtch[:0]
+		na := 0
+		fieldStart := 0
+		i := 0
+		// Skip spaces in the front of the input.
+		for i < len(s) && asciiSpace[s[i]] != 0 {
+			i++
+		}
+		fieldStart = i
+		for i < len(s) {
+			if asciiSpace[s[i]] == 0 {
+				i++
+				continue
+			}
+			a = append(a, s[fieldStart:i]) // expensive line from profiling
+			na++
+			i++
+			// Skip spaces in between fields.
+			for i < len(s) && asciiSpace[s[i]] != 0 {
+				i++
+			}
+			fieldStart = i
+		}
+		if fieldStart < len(s) { // Last field might end at EOF.
+			a = append(a, s[fieldStart:])
+		}
+		return a
+	}
+
+	// Some runes in the input string are not ASCII.
+	return strings.FieldsFunc(s, unicode.IsSpace)
+}

@@ -1,0 +1,454 @@
+data_2A21
+#
+# This file has a chain whose name is two characters long.
+_entry.id   2A21 
+# 
+_audit_conform.dict_name       mmcif_pdbx.dic 
+_audit_conform.dict_version    5.286 
+_audit_conform.dict_location   http://mmcif.pdb.org/dictionaries/ascii/mmcif_pdbx.dic 
+# 
+loop_
+_database_2.database_id 
+_database_2.database_code 
+PDB   2A21         
+RCSB  RCSB033393   
+WWPDB D_1000033393 
+# 
+_pdbx_database_status.status_code                     REL 
+_pdbx_database_status.entry_id                        2A21 
+_pdbx_database_status.recvd_initial_deposition_date   2005-06-21 
+_pdbx_database_status.deposit_site                    RCSB 
+_pdbx_database_status.process_site                    RCSB 
+_pdbx_database_status.status_code_sf                  REL 
+_pdbx_database_status.status_code_mr                  ? 
+_pdbx_database_status.SG_entry                        ? 
+_pdbx_database_status.pdb_format_compatible           Y 
+_pdbx_database_status.status_code_cs                  ? 
+_pdbx_database_status.methods_development_category    ? 
+# 
+loop_
+_audit_author.name 
+_audit_author.pdbx_ordinal 
+'Kona, F.'    1 
+'Xu, X.'      2 
+'Lu, J.'      3 
+'Martin, P.'  4 
+'Gatti, D.L.' 5 
+# 
+_citation.id                        primary 
+_citation.title                     
+;Electronic structure of the metal center in the Cd(2+), Zn(2+), and Cu(2+) substituted forms of KDO8P synthase: implications for catalysis.
+;
+_citation.journal_abbrev            Biochemistry 
+_citation.journal_volume            48 
+_citation.page_first                3610 
+_citation.page_last                 3630 
+_citation.year                      2009 
+_citation.journal_id_ASTM           BICHAW 
+_citation.country                   US 
+_citation.journal_id_ISSN           0006-2960 
+_citation.journal_id_CSD            0033 
+_citation.book_publisher            ? 
+_citation.pdbx_database_id_PubMed   19228070 
+_citation.pdbx_database_id_DOI      10.1021/bi801955h 
+# 
+loop_
+_citation_author.citation_id 
+_citation_author.name 
+_citation_author.ordinal 
+primary 'Kona, F.'    1 
+primary 'Tao, P.'     2 
+primary 'Martin, P.'  3 
+primary 'Xu, X.'      4 
+primary 'Gatti, D.L.' 5 
+# 
+_cell.entry_id           2A21 
+_cell.length_a           84.527
+_cell.length_a           1
+_cell.length_b           84.527 
+_cell.length_c           159.752 
+_cell.angle_alpha        90.00 
+_cell.angle_beta         90.00 
+_cell.angle_gamma        120.00 
+_cell.Z_PDB              12 
+_cell.pdbx_unique_axis   ? 
+# 
+_symmetry.entry_id                         2A21 
+_symmetry.space_group_name_H-M             'P 31 2 1' 
+_symmetry.pdbx_full_space_group_name_H-M   ? 
+_symmetry.cell_setting                     ? 
+_symmetry.Int_Tables_number                152 
+_symmetry.space_group_name_Hall            ? 
+# 
+loop_
+_entity.id 
+_entity.type 
+_entity.src_method 
+_entity.pdbx_description 
+_entity.formula_weight 
+_entity.pdbx_number_of_molecules 
+_entity.pdbx_ec 
+_entity.pdbx_mutation 
+_entity.pdbx_fragment 
+_entity.details 
+1 polymer     man '2-dehydro-3-deoxyphosphooctonate aldolase' 29774.406 2   2.5.1.55 ? ? ? 
+2 non-polymer syn 'PHOSPHATE ION'                             94.971    2   ?        ? ? ? 
+3 non-polymer syn 'ZINC ION'                                  65.409    2   ?        ? ? ? 
+4 non-polymer syn PHOSPHOENOLPYRUVATE                         168.042   2   ?        ? ? ? 
+5 water       nat water                                       18.015    550 ?        ? ? ? 
+# 
+_entity_name_com.entity_id   1 
+_entity_name_com.name        
+;Phospho-2-dehydro-3-deoxyoctonate aldolase, 3-deoxy-D-manno-octulosonic acid 8-phosphate synthetase, KDO-8-phosphate synthetase, KDO 8-P synthase, KDOPS
+;
+# 
+_entity_poly.entity_id                      1 
+_entity_poly.type                           'polypeptide(L)' 
+_entity_poly.nstd_linkage                   no 
+_entity_poly.nstd_monomer                   no 
+_entity_poly.pdbx_seq_one_letter_code       
+;MEKFLVIAGPCAIESEELLLKVGEEIKRLSEKFKEVEFVFKSSFDKANRSSIHSFRGHGLEYGVKALRKVKEEFGLKITT
+DIHESWQAEPVAEVADIIQIPAFLCRQTDLLLAAAKTGRAVNVKKGQFLAPWDTKNVVEKLKFGGAKEIYLTERGTTFGY
+NNLVVDFRSLPIMKQWAKVIYDATHSVQLPGGLGDKSGGMREFIFPLIRAAVAVGCDGVFMETHPEPEKALSDASTQLPL
+SQLEGIIEAILEIREVASKYYETIPVK
+;
+_entity_poly.pdbx_seq_one_letter_code_can   
+;MEKFLVIAGPCAIESEELLLKVGEEIKRLSEKFKEVEFVFKSSFDKANRSSIHSFRGHGLEYGVKALRKVKEEFGLKITT
+DIHESWQAEPVAEVADIIQIPAFLCRQTDLLLAAAKTGRAVNVKKGQFLAPWDTKNVVEKLKFGGAKEIYLTERGTTFGY
+NNLVVDFRSLPIMKQWAKVIYDATHSVQLPGGLGDKSGGMREFIFPLIRAAVAVGCDGVFMETHPEPEKALSDASTQLPL
+SQLEGIIEAILEIREVASKYYETIPVK
+;
+_entity_poly.pdbx_strand_id                 A,B 
+_entity_poly.pdbx_target_identifier         ? 
+# 
+loop_
+_entity_poly_seq.entity_id 
+_entity_poly_seq.num 
+_entity_poly_seq.mon_id 
+_entity_poly_seq.hetero 
+1 1   MET n 
+1 2   GLU n 
+1 3   LYS n 
+1 4   PHE n 
+1 5   LEU n 
+1 6   VAL n 
+1 7   ILE n 
+1 8   ALA n 
+1 9   GLY n 
+1 10  PRO n 
+1 11  CYS n 
+1 12  ALA n 
+1 13  ILE n 
+1 14  GLU n 
+1 15  SER n 
+1 16  GLU n 
+1 17  GLU n 
+1 18  LEU n 
+1 19  LEU n 
+1 20  LEU n 
+1 21  LYS n 
+1 22  VAL n 
+1 23  GLY n 
+1 24  GLU n 
+1 25  GLU n 
+1 26  ILE n 
+1 27  LYS n 
+1 28  ARG n 
+1 29  LEU n 
+1 30  SER n 
+1 31  GLU n 
+1 32  LYS n 
+1 33  PHE n 
+1 34  LYS n 
+1 35  GLU n 
+1 36  VAL n 
+1 37  GLU n 
+1 38  PHE n 
+1 39  VAL n 
+1 40  PHE n 
+1 41  LYS n 
+1 42  SER n 
+1 43  SER n 
+1 44  PHE n 
+1 45  ASP n 
+1 46  LYS n 
+1 47  ALA n 
+1 48  ASN n 
+1 49  ARG n 
+1 50  SER n 
+1 51  SER n 
+1 52  ILE n 
+1 53  HIS n 
+1 54  SER n 
+1 55  PHE n 
+1 56  ARG n 
+1 57  GLY n 
+1 58  HIS n 
+1 59  GLY n 
+1 60  LEU n 
+1 61  GLU n 
+1 62  TYR n 
+1 63  GLY n 
+1 64  VAL n 
+1 65  LYS n 
+1 66  ALA n 
+1 67  LEU n 
+1 68  ARG n 
+1 69  LYS n 
+1 70  VAL n 
+1 71  LYS n 
+1 72  GLU n 
+1 73  GLU n 
+1 74  PHE n 
+1 75  GLY n 
+1 76  LEU n 
+1 77  LYS n 
+1 78  ILE n 
+1 79  THR n 
+1 80  THR n 
+1 81  ASP n 
+1 82  ILE n 
+1 83  HIS n 
+1 84  GLU n 
+1 85  SER n 
+1 86  TRP n 
+1 87  GLN n 
+1 88  ALA n 
+1 89  GLU n 
+1 90  PRO n 
+1 91  VAL n 
+1 92  ALA n 
+1 93  GLU n 
+1 94  VAL n 
+1 95  ALA n 
+1 96  ASP n 
+1 97  ILE n 
+1 98  ILE n 
+1 99  GLN n 
+1 100 ILE n 
+1 101 PRO n 
+1 102 ALA n 
+1 103 PHE n 
+1 104 LEU n 
+1 105 CYS n 
+1 106 ARG n 
+1 107 GLN n 
+1 108 THR n 
+1 109 ASP n 
+1 110 LEU n 
+1 111 LEU n 
+1 112 LEU n 
+1 113 ALA n 
+1 114 ALA n 
+1 115 ALA n 
+1 116 LYS n 
+1 117 THR n 
+1 118 GLY n 
+1 119 ARG n 
+1 120 ALA n 
+1 121 VAL n 
+1 122 ASN n 
+1 123 VAL n 
+1 124 LYS n 
+1 125 LYS n 
+1 126 GLY n 
+1 127 GLN n 
+1 128 PHE n 
+1 129 LEU n 
+1 130 ALA n 
+1 131 PRO n 
+1 132 TRP n 
+1 133 ASP n 
+1 134 THR n 
+1 135 LYS n 
+1 136 ASN n 
+1 137 VAL n 
+1 138 VAL n 
+1 139 GLU n 
+1 140 LYS n 
+1 141 LEU n 
+1 142 LYS n 
+1 143 PHE n 
+1 144 GLY n 
+1 145 GLY n 
+1 146 ALA n 
+1 147 LYS n 
+1 148 GLU n 
+1 149 ILE n 
+1 150 TYR n 
+1 151 LEU n 
+1 152 THR n 
+1 153 GLU n 
+1 154 ARG n 
+1 155 GLY n 
+1 156 THR n 
+1 157 THR n 
+1 158 PHE n 
+1 159 GLY n 
+1 160 TYR n 
+1 161 ASN n 
+1 162 ASN n 
+1 163 LEU n 
+1 164 VAL n 
+1 165 VAL n 
+1 166 ASP n 
+1 167 PHE n 
+1 168 ARG n 
+1 169 SER n 
+1 170 LEU n 
+1 171 PRO n 
+1 172 ILE n 
+1 173 MET n 
+1 174 LYS n 
+1 175 GLN n 
+1 176 TRP n 
+1 177 ALA n 
+1 178 LYS n 
+1 179 VAL n 
+1 180 ILE n 
+1 181 TYR n 
+1 182 ASP n 
+1 183 ALA n 
+1 184 THR n 
+1 185 HIS n 
+1 186 SER n 
+1 187 VAL n 
+1 188 GLN n 
+1 189 LEU n 
+1 190 PRO n 
+1 191 GLY n 
+1 192 GLY n 
+1 193 LEU n 
+1 194 GLY n 
+1 195 ASP n 
+1 196 LYS n 
+1 197 SER n 
+1 198 GLY n 
+1 199 GLY n 
+1 200 MET n 
+1 201 ARG n 
+1 202 GLU n 
+1 203 PHE n 
+1 204 ILE n 
+1 205 PHE n 
+1 206 PRO n 
+1 207 LEU n 
+1 208 ILE n 
+1 209 ARG n 
+1 210 ALA n 
+1 211 ALA n 
+1 212 VAL n 
+1 213 ALA n 
+1 214 VAL n 
+1 215 GLY n 
+1 216 CYS n 
+1 217 ASP n 
+1 218 GLY n 
+1 219 VAL n 
+1 220 PHE n 
+1 221 MET n 
+1 222 GLU n 
+1 223 THR n 
+1 224 HIS n 
+1 225 PRO n 
+1 226 GLU n 
+1 227 PRO n 
+1 228 GLU n 
+1 229 LYS n 
+1 230 ALA n 
+1 231 LEU n 
+1 232 SER n 
+1 233 ASP n 
+1 234 ALA n 
+1 235 SER n 
+1 236 THR n 
+1 237 GLN n 
+1 238 LEU n 
+1 239 PRO n 
+1 240 LEU n 
+1 241 SER n 
+1 242 GLN n 
+1 243 LEU n 
+1 244 GLU n 
+1 245 GLY n 
+1 246 ILE n 
+1 247 ILE n 
+1 248 GLU n 
+1 249 ALA n 
+1 250 ILE n 
+1 251 LEU n 
+1 252 GLU n 
+1 253 ILE n 
+1 254 ARG n 
+1 255 GLU n 
+1 256 VAL n 
+1 257 ALA n 
+1 258 SER n 
+1 259 LYS n 
+1 260 TYR n 
+1 261 TYR n 
+1 262 GLU n 
+1 263 THR n 
+1 264 ILE n 
+1 265 PRO n 
+1 266 VAL n 
+1 267 LYS n 
+# 
+_entity_src_gen.entity_id                          1 
+_entity_src_gen.pdbx_src_id                        1 
+_entity_src_gen.pdbx_alt_source_flag               sample 
+_entity_src_gen.pdbx_seq_type                      ? 
+_entity_src_gen.pdbx_beg_seq_num                   ? 
+_entity_src_gen.pdbx_end_seq_num                   ? 
+_entity_src_gen.gene_src_common_name               ? 
+_entity_src_gen.gene_src_genus                     Aquifex 
+_entity_src_gen.pdbx_gene_src_gene                 kdsA 
+loop_
+_atom_site.group_PDB 
+_atom_site.id 
+_atom_site.type_symbol 
+_atom_site.label_atom_id 
+_atom_site.label_alt_id 
+_atom_site.label_comp_id 
+_atom_site.label_asym_id 
+_atom_site.label_entity_id 
+_atom_site.label_seq_id 
+_atom_site.pdbx_PDB_ins_code 
+_atom_site.Cartn_x 
+_atom_site.Cartn_y 
+_atom_site.Cartn_z 
+_atom_site.occupancy 
+_atom_site.B_iso_or_equiv 
+_atom_site.pdbx_formal_charge 
+_atom_site.auth_seq_id 
+_atom_site.auth_comp_id 
+_atom_site.auth_asym_id 
+_atom_site.auth_atom_id 
+_atom_site.pdbx_PDB_model_num 
+ATOM 1      N N     . ASN A  1  3    ? -12.173  76.285   -54.829  1.00 10.00 ? 3    ASN Az N     1 
+ATOM 2      C CA    . ASN A  1  3    ? -12.680  74.965   -54.691  1.00 10.00 ? 3    ASN Az CA    1 
+ATOM 3      C C     . ASN A  1  3    ? -13.642  75.293   -53.642  1.00 10.00 ? 3    ASN Az C     1 
+ATOM 4      O O     . ASN A  1  3    ? -14.277  74.489   -53.007  1.00 10.00 ? 3    ASN Az O     1 
+ATOM 5      C CB    . ASN A  1  3    ? -11.570  74.095   -54.239  1.00 10.00 ? 3    ASN Az CB    1 
+ATOM 6      C CG    . ASN A  1  3    ? -10.295  74.699   -54.539  1.00 10.00 ? 3    ASN Az CG    1 
+ATOM 7      O OD1   . ASN A  1  3    ? -9.552   74.251   -55.396  1.00 10.00 ? 3    ASN Az OD1   1 
+ATOM 8      N ND2   . ASN A  1  3    ? -10.038  75.786   -53.888  1.00 10.00 ? 3    ASN Az ND2   1 
+ATOM 9      N N     . PHE A  1  4    ? -13.774  76.572   -53.540  1.00 10.00 ? 4    PHE Az N     1 
+ATOM 10     C CA    . PHE A  1  4    ? -14.805  77.169   -52.643  1.00 10.00 ? 4    PHE Az CA    1 
+ATOM 11     C C     . PHE A  1  4    ? -16.387  77.123   -52.351  1.00 10.00 ? 4    PHE Az C     1 
+ATOM 12     O O     . PHE A  1  4    ? -17.091  76.199   -52.706  1.00 10.00 ? 4    PHE Az O     1 
+ATOM 13     C CB    . PHE A  1  4    ? -14.391  78.575   -52.480  1.00 10.00 ? 4    PHE Az CB    1 
+ATOM 14     C CG    . PHE A  1  4    ? -13.894  78.868   -51.127  1.00 10.00 ? 4    PHE Az CG    1 
+ATOM 15     C CD1   . PHE A  1  4    ? -12.566  78.847   -50.862  1.00 10.00 ? 4    PHE Az CD1   1 
+ATOM 16     C CD2   . PHE A  1  4    ? -14.770  79.178   -50.130  1.00 10.00 ? 4    PHE Az CD2   1 
+ATOM 17     C CE1   . PHE A  1  4    ? -12.152  79.115   -49.678  1.00 10.00 ? 4    PHE Az CE1   1 
+ATOM 18     C CE2   . PHE A  1  4    ? -14.321  79.445   -48.951  1.00 10.00 ? 4    PHE Az CE2   1 
+ATOM 19     C CZ    . PHE A  1  4    ? -13.021  79.410   -48.723  1.00 10.00 ? 4    PHE Az CZ    1 
+ATOM 20     N N     . THR A  1  5    ? -16.883  78.220   -51.719  1.00 10.00 ? 5    THR Az N     1 
+ATOM 21     C CA    . THR A  1  5    ? -17.523  78.458   -50.366  1.00 10.00 ? 5    THR Az CA    1 
+ATOM 22     C C     . THR A  1  5    ? -19.036  78.217   -50.240  1.00 10.00 ? 5    THR Az C     1 
+ATOM 23     O O     . THR A  1  5    ? -19.539  77.655   -51.221  1.00 10.00 ? 5    THR Az O     1 
+ATOM 24     C CB    . THR A  1  5    ? -17.162  79.809   -49.667  1.00 10.00 ? 5    THR Az CB    1 
+ATOM 25     O OG1   . THR A  1  5    ? -18.342  80.386   -49.090  1.00 10.00 ? 5    THR Az OG1   1 
+ATOM 26     C CG2   . THR A  1  5    ? -16.514  80.750   -50.593  1.00 10.00 ? 5    THR Az CG2   1 
+ATOM 27     N N     . VAL A  1  6    ? -19.789  78.511   -49.115  1.00 30.00 ? 6    VAL Az N     1 

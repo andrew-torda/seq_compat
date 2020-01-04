@@ -1,0 +1,3 @@
+* in atomsite.go, we can remove the strings as they are finished.
+Does it save any time ?
+* When feeding atomsite.go, we can adjust the size of the string slice. What happens with 1, 10, 20, 100, 500, 1000

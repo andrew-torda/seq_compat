@@ -1,0 +1,2 @@
+This is a wrapper around an io.ReadCloser.
+When asked for n bytes, it will return a faulty read with a probability of probFail and severity controlled by fracFail.

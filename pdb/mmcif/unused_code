@@ -1,0 +1,23 @@
+// fromEnv is used in benchmarking. We sometimes want to test things
+/// like buffer size, by trying values from the environment.
+func fromEnv(name string, mr *MmcifReader) (val int, ok bool) {
+	ok = true
+	var t string
+	if t, ok = os.LookupEnv(name); ok != true {
+		mr.fill(name+" not found", false)
+		return 0, ok
+	} else {
+		if x, err := strconv.ParseInt(t, 10, 32); err != nil {
+			mr.fill("converting value for"+name, false)
+		} else {
+			return int(x), ok
+		}
+	}
+	return 0, false
+}
+
+func (me *modelextra) dbginfo () string {
+	s := fmt.Sprintln ("newmodel info.. Chain:", me.chainID,
+		"model number", me.mdlNum, "\nlength of insertion codes", len(me.insCode), "\nlast seen residue type", me.resname[len(me.resname)-1])
+	return s
+}

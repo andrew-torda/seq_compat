@@ -1,0 +1,59 @@
+const (
+	ini_group_pdb          = 0 // These are initial guesses as to where the
+	ini_id                 = 1 // columns in each file are. We test against
+	ini_type_symbol        = 2 // this list. If it does not work, we do explicit
+	ini_label_atom_id      = 3 // searches for each item.
+	ini_label_alt_id       = 4
+	ini_label_comp_id      = 5
+	ini_label_asym_id      = 6
+	ini_label_entity_id    = 7
+	ini_label_seq_id       = 8
+	ini_pdbx_pdb_ins_code  = 9
+	ini_cartn_x            = 10
+	ini_cartn_y            = 11
+	ini_cartn_z            = 12
+	ini_occupancy          = 13
+	ini_b_iso_or_equiv     = 14
+	ini_pdbx_formal_charge = 15
+	ini_auth_seq_id        = 16
+	ini_auth_comp_id       = 17
+	ini_auth_asym_id       = 18
+	ini_auth_atom_id       = 19
+	ini_pdbx_pdb_model_num = 20
+)
+
+const (
+	s_group_pdb          = "group_pdb"     // We do not use
+	s_id                 = "id"            // all the entries here,
+	s_type_symbol        = "type_symbol"   // but the list was made
+	s_label_atom_id      = "label_atom_id" // automatically, so it
+	s_label_alt_id       = "label_alt_id"  // includes everything.
+	s_label_comp_id      = "label_comp_id"
+	s_label_asym_id      = "label_asym_id"
+	s_label_entity_id    = "label_entity_id"
+	s_label_seq_id       = "label_seq_id"
+	s_pdbx_pdb_ins_code  = "pdbx_pdb_ins_code"
+	s_cartn_x            = "cartn_x"
+	s_cartn_y            = "cartn_y"
+	s_cartn_z            = "cartn_z"
+	s_occupancy          = "occupancy"
+	s_b_iso_or_equiv     = "b_iso_or_equiv"
+	s_pdbx_formal_charge = "pdbx_formal_charge"
+	s_auth_seq_id        = "auth_seq_id"
+	s_auth_comp_id       = "auth_comp_id"
+	s_auth_asym_id       = "auth_asym_id"
+	s_auth_atom_id       = "auth_atom_id"
+	s_pdbx_pdb_model_num = "pdbx_pdb_model_num"
+)
+
+type colNames struct {
+	auth_atom_id, // Names of columns that we are probably
+	auth_comp_id, //       interested in.
+	auth_asym_id,
+	auth_seq_id,
+	pdbx_pdb_ins_code,
+	cartn_x,
+	cartn_y,
+	cartn_z,
+	pdbx_pdb_model_num int // why not uint8 ?
+}

@@ -1,0 +1,88 @@
+data_UNNAMED
+# This file has different column ordering to most of the ones in the PDB. 
+loop_
+_atom_site.group_PDB 
+_atom_site.id 
+_atom_site.auth_atom_id 
+_atom_site.label_atom_id 
+_atom_site.label_alt_id 
+_atom_site.auth_comp_id 
+_atom_site.label_comp_id 
+_atom_site.pdbx_auth_comp_id 
+_atom_site.auth_asym_id 
+_atom_site.label_asym_id 
+_atom_site.auth_seq_id 
+_atom_site.label_seq_id 
+_atom_site.pdbx_PDB_ins_code 
+_atom_site.Cartn_x 
+_atom_site.Cartn_y 
+_atom_site.Cartn_z 
+_atom_site.occupancy 
+_atom_site.B_iso_or_equiv 
+_atom_site.pdbx_PDB_model_num 
+_atom_site.label_entity_id 
+_atom_site.type_symbol 
+_atom_site.pdbx_formal_charge 
+ATOM   1  N   N   . ARG ARG ARG A A 1   1   . 26.465 27.452 -2.490 1.00 25.18 1 . . ? 
+ATOM   2  CA  CA  . ARG ARG ARG A A 1   1   . 25.497 26.862 -1.573 1.00 17.63 1 . . ? 
+ATOM   3  C   C   . ARG ARG ARG A A 1   1   . 26.193 26.179 -0.437 1.00 17.26 1 . . ? 
+ATOM   4  O   O   . ARG ARG ARG A A 1   1   . 27.270 25.549 -0.624 1.00 21.07 1 . . ? 
+ATOM   5  CB  CB  . ARG ARG ARG A A 1   1   . 24.583 25.804 -2.239 1.00 23.27 1 . . ? 
+ATOM   6  CG  CG  . ARG ARG ARG A A 1   1   . 25.091 24.375 -2.409 1.00 13.42 1 . . ? 
+ATOM   7  N   N   . PRO PRO PRO A A 2   2   . 25.667 26.396 0.708  1.00 10.92 1 . . ? 
+ATOM   8  CA  CA  . PRO PRO PRO A A 2   2   . 26.222 25.760 1.891  1.00 9.21  1 . . ? 
+ATOM   9  C   C   . PRO PRO PRO A A 2   2   . 26.207 24.242 1.830  1.00 12.15 1 . . ? 
+ATOM   10 O   O   . PRO PRO PRO A A 2   2   . 25.400 23.576 1.139  1.00 14.46 1 . . ? 
+ATOM   11 CB  CB  . PRO PRO PRO A A 2   2   . 25.260 26.207 3.033  1.00 13.09 1 . . ? 
+ATOM   12 CG  CG  . PRO PRO PRO A A 2   2   . 24.512 27.428 2.493  1.00 11.42 1 . . ? 
+ATOM   13 CD  CD  . PRO PRO PRO A A 2   2   . 24.606 27.382 0.978  1.00 11.88 1 . . ? 
+ATOM   14 N   N   . ASP ASP ASP A A 3   3   . 27.170 23.634 2.462  1.00 18.23 1 . . ? 
+ATOM   15 CA  CA  . ASP ASP ASP A A 3   3   . 27.284 22.163 2.498  1.00 10.58 1 . . ? 
+ATOM   16 C   C   . ASP ASP ASP A A 3   3   . 26.043 21.506 3.085  1.00 15.62 1 . . ? 
+ATOM   17 O   O   . ASP ASP ASP A A 3   3   . 25.752 20.350 2.705  1.00 12.96 1 . . ? 
+ATOM   18 CB  CB  . ASP ASP ASP A A 3   3   . 28.425 21.747 3.461  1.00 18.87 1 . . ? 
+ATOM   19 CG  CG  . ASP ASP ASP A A 3   3   . 29.791 21.886 2.787  1.00 34.90 1 . . ? 
+ATOM   20 OD1 OD1 . ASP ASP ASP A A 3   3   . 29.875 22.104 1.543  1.00 26.81 1 . . ? 
+ATOM   21 OD2 OD2 . ASP ASP ASP A A 3   3   . 30.806 21.501 3.431  1.00 30.82 1 . . ? 
+ATOM   22 N   N   . PHE PHE PHE A A 4   4   . 25.394 22.184 4.041  1.00 11.71 1 . . ? 
+ATOM   23 CA  CA  . PHE PHE PHE A A 4   4   . 24.172 21.585 4.618  1.00 17.01 1 . . ? 
+ATOM   24 C   C   . PHE PHE PHE A A 4   4   . 23.009 21.375 3.624  1.00 10.30 1 . . ? 
+ATOM   25 O   O   . PHE PHE PHE A A 4   4   . 22.082 20.603 3.921  1.00 13.86 1 . . ? 
+ATOM   26 CB  CB  . PHE PHE PHE A A 4   4   . 23.692 22.331 5.862  1.00 7.95  1 . . ? 
+ATOM   27 N   N   . CYS CYS CYS A A 5   5   . 23.095 22.004 2.522  1.00 7.84  1 . . ? 
+ATOM   28 CA  CA  . CYS CYS CYS A A 5   5   . 22.106 21.863 1.467  1.00 9.61  1 . . ? 
+ATOM   29 C   C   . CYS CYS CYS A A 5   5   . 22.192 20.518 0.830  1.00 10.97 1 . . ? 
+ATOM   30 O   O   . CYS CYS CYS A A 5   5   . 21.230 20.068 0.167  1.00 9.33  1 . . ? 
+ATOM   31 CB  CB  . CYS CYS CYS A A 5   5   . 22.358 22.904 0.371  1.00 10.97 1 . . ? 
+ATOM   32 SG  SG  . CYS CYS CYS A A 5   5   . 22.145 24.592 0.888  1.00 12.56 1 . . ? 
+ATOM   33 N   N   . LEU LEU LEU A A 6   6   . 23.326 19.826 1.008  1.00 13.81 1 . . ? 
+ATOM   34 CA  CA  . LEU LEU LEU A A 6   6   . 23.436 18.460 0.459  1.00 16.06 1 . . ? 
+ATOM   35 C   C   . LEU LEU LEU A A 6   6   . 22.958 17.365 1.407  1.00 17.38 1 . . ? 
+ATOM   36 O   O   . LEU LEU LEU A A 6   6   . 22.938 16.180 0.999  1.00 21.19 1 . . ? 
+ATOM   37 CB  CB  . LEU LEU LEU A A 6   6   . 24.898 18.084 0.131  1.00 14.78 1 . . ? 
+ATOM   38 CG  CG  . LEU LEU LEU A A 6   6   . 25.572 19.129 -0.776 1.00 20.58 1 . . ? 
+ATOM   39 CD1 CD1 . LEU LEU LEU A A 6   6   . 27.037 18.695 -1.116 1.00 24.65 1 . . ? 
+ATOM   40 CD2 CD2 . LEU LEU LEU A A 6   6   . 24.791 19.488 -2.049 1.00 22.62 1 . . ? 
+HETATM 41 O   O   . HOH HOH HOH A . 101 101 . 14.483 32.405 -3.949 1.00 16.73 1 . . ? 
+HETATM 42 O   O   . HOH HOH HOH A . 102 102 . 5.350  14.061 18.456 1.00 25.35 1 . . ? 
+HETATM 43 O   O   . HOH HOH HOH A . 110 110 . 22.066 20.487 9.866  1.00 24.91 1 . . ? 
+# 
+_cell.entry_id      UNNAMED 
+_cell.length_a      1 
+_cell.length_b      1 
+_cell.length_c      1 
+_cell.angle_alpha   90 
+_cell.angle_beta    90 
+_cell.angle_gamma   90 
+# 
+_entity_poly.entity_id                  1 
+_entity_poly.pdbx_seq_one_letter_code   RPDFCL 
+_entity_poly.pdbx_strand_id             A 
+_entity_poly.type                       'polypeptide(L)' 
+_entity_poly.pdbx_target_identifier     ? 
+# 
+_exptl.entry_id   UNNAMED 
+_exptl.method     'ELECTRON MICROSCOPY' 
+# 
+_symmetry.space_group_name_H-M   'P 1' 
+# 

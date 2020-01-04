@@ -1,0 +1,30 @@
+// TestSize checks that we return the correct size of a matrix
+func TestSize(t *testing.T) {
+	m := matrix.NewFMatrix2d(nrowDflt, ncolDflt)
+	nrow, ncol := m.Size()
+	fmt.Fprintln(os.Stdout, "m size is ", nrow, ncol)
+	if nrow != nrowDflt {
+		t.Fatal("TestSize: wanted %d, got %d rows", nrowDflt, nrow)
+	}
+	if ncol != ncolDflt {
+		t.Fatal("TestSize: wanted %d, got %d cols", ncolDflt, ncol)
+	}
+}
+
+// TestFill fills the matrix which should panic if we do something terrible.
+func TestFill(t *testing.T) {
+	b := matrix.NewFMatrix2d(nrowDflt, ncolDflt)
+	var n float32 = 1
+	fmt.Fprintf(os.Stdout,
+		"%T of len and cap, %d, %d\n", b.Mat[0], len(b.Mat[0]), cap(b.Mat[0]))
+	for i := 0; i < nrowDflt; i++ {
+		for j := 0; j < ncolDflt; j++ {
+			b.Mat[i][j] = n
+			n++
+		}
+	}
+	fmt.Fprint(os.Stdout, b.BackingDataString())
+
+	s := b.String()
+	fmt.Fprintln(ioutil.Discard, s)
+}

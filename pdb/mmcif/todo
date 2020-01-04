@@ -1,0 +1,5 @@
+* in error testing, make a single function that loops over a table
+ { filename, "expected error type"}
+ and remove all the individual functions
+
+* add a test that provokes the bad conversion of residue number
