@@ -5,10 +5,10 @@
 package gotoh_test
 
 import (
-	gth "andrew/gotoh"
-	"andrew/randseq"
-	"andrew/seq"
-	"andrew/submat"
+	gth "github.com/andrew-torda/goutil/gotoh"
+	"github.com/andrew-torda/goutil/randseq"
+	"github.com/andrew-torda/goutil/seq"
+	"github.com/andrew-torda/goutil/submat"
 	"fmt"
 	"io/ioutil"
 	"os"

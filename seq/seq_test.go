@@ -1,7 +1,7 @@
 package seq_test
 
 import (
-	. "andrew/seq"
+	. "github.com/andrew-torda/goutil/seq"
 	"fmt"
 	"io/ioutil"
 	"os"

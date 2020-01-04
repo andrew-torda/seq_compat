@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	. "pdb/mmcif"
-	"pdb/zwrap"
+	. "github.com/andrew-torda/goutil/pdb/mmcif"
+	"github.com/andrew-torda/goutil/pdb/zwrap"
 	"strings"
 	"testing"
 )

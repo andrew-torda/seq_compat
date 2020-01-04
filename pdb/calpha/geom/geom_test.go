@@ -4,8 +4,8 @@ package geom_test
 
 import (
 	"math"
-	. "github.com/goutil/pdb/calpha/geom"
-	. "github.com/goutil/pdb/cmmn"
+	. "github.com/andrew-torda/goutil/pdb/calpha/geom"
+	. "github.com/andrew-torda/goutil/pdb/cmmn"
 	"testing"
 )
 

@@ -1,5 +1,5 @@
 package mmcif
-import "pdb/cmmn"
+import "github.com/andrew-torda/goutil/pdb/cmmn"
 
 // Export some internal functions for testing
 

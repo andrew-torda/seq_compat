@@ -4,7 +4,7 @@ package altschul
 // Bull Math Biol, 48, 603-616 1986
 
 import (
-	"github.com/goutil/matrix"
+	"github.com/andrew-torda/goutil/matrix"
 	"fmt"
 	"os"
 )

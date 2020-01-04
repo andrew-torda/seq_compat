@@ -2,7 +2,7 @@
 package zwrap_test
 
 import (
-	"pdb/zwrap"
+	"github.com/andrew-torda/goutil/pdb/zwrap"
 	"errors"
 	"io"
 	"io/ioutil"

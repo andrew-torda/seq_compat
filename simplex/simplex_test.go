@@ -5,9 +5,9 @@ package simplex_test
 import (
 	"errors"
 	"fmt"
-	. "github.com/goutil/simplex"
+	. "github.com/andrew-torda/goutil/simplex"
 	"testing"
-	"src/matrix"
+	"github.com/andrew-torda/goutil/matrix"
 )
 
 // cost1 depends on one parameter, but it has two dimensions. We use it

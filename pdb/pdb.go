@@ -6,9 +6,9 @@
 package pdb
 
 import (
-	"pdb/cmmn"
-	"pdb/mmcif"
-	"pdb/zwrap"
+	"github.com/andrew-torda/goutil/pdb/cmmn"
+	"github.com/andrew-torda/goutil/pdb/mmcif"
+	"github.com/andrew-torda/goutil/pdb/zwrap"
 	"bufio"
 	"errors"
 	"io"

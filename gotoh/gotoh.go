@@ -9,7 +9,7 @@ package gotoh
 
 import (
 	"fmt"
-	"andrew/matrix"
+	"github.com/andrew-torda/goutil/matrix"
 )
 
 // Al_type is a byte which can be global or local. By making it its

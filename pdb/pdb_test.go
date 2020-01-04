@@ -3,9 +3,9 @@ package pdb_test
 import (
 	"os"
 	"path/filepath"
-	. "pdb"
-	"pdb/cmmn"
-	"pdb/mmcif"
+	. "github.com/andrew-torda/goutil/pdb"
+	"github.com/andrew-torda/goutil/pdb/cmmn"
+	"github.com/andrew-torda/goutil/pdb/mmcif"
 	"testing"
 )
 

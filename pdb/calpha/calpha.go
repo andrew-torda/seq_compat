@@ -8,8 +8,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"pdb"
-	"../pdb/cmmn"
+	"github.com/andrew-torda/goutil/pdb"
+	"github.com/andrew-torda/goutil/pdb/cmmn"
 	"sync"
 )
 

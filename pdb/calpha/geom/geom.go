@@ -4,7 +4,7 @@ package geom
 
 import (
 	"math"
-	"pdb/cmmn"
+	"github.com/andrew-torda/goutil/pdb/cmmn"
 )
 
 const (

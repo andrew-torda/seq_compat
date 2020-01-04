@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
-	"src/matrix"
+	"github.com/andrew-torda/goutil/matrix"
 )
 
 const (

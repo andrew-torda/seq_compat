@@ -1,6 +1,6 @@
 package cmmn_test
 import (
-	. "pdb/cmmn"
+	. "github.com/andrew-torda/goutil/pdb/cmmn"
 	"testing"
 )
 func TestXyzOk (t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"pdb/zwrap"
+	"github.com/andrew-torda/goutil/pdb/zwrap"
 )
 
 // getHttp is given a four letter pdb code. It goes to the protein data
