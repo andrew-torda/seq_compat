@@ -6,16 +6,29 @@
 
 package simplex
 
-func newSWk (npnt, ndim int) (sWk){
-	var sWk sWk
-	sWk.y = make([]float32, npnt)
-	sWk.rank = make([]int, npnt)
-	sWk.cntrd = make([]float32, ndim)
-	sWk.ptrial = make([]float32, ndim)
-	return sWk
+import (
+	"github.com/andrew-torda/goutil/matrix"
+)
+
+func SplxFromSlice(npoint, nparam int, x []float32) splx {
+	if npoint*nparam != len(x) {
+		panic("Should not happen in testing")
+	}
+	splx := splx{matrix.NewFMatrix2d(npoint, nparam)}
+	n := 0
+	for i := range splx.Mat { // Put array into simplex
+		for j := range splx.Mat[i] {
+			splx.Mat[i][j] = x[n]
+			n++
+		}
+	}
+	return splx
 }
-func Amo1 (splx splx) {
-	sWk := newSWk (3, 2)
-	tRes, _ := amotry (splx, alpha, sWk)
-	nothing (tRes)
+
+var NewSwk = newSWk
+
+func Amo1(splx splx) {
+	sWk := newSWk(3, 2)
+	tRes, _ := amotry(splx, alpha, sWk)
+	nothing(tRes)
 }

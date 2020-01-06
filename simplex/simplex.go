@@ -1,26 +1,53 @@
 // 27 Dec 2019
 // Package seq provides a simplex (Nelder and Meade) optimizer.
+// Using J.A. Nelder, R. Mead, Comp. J., 7, 308-313
+// J.C. Lagarias, J.A. Reeds, M.H. Wright, and P.E. Wright
+// Press, W.H., Teukolsky, S.A., Vetterling, W.T., Flannery, B.P.,
+// Numerical Recipes in C., Cambridge University Press, 1992
+// The structure with the amotry() function comes from numerical recipes,
+// but the formulae for moving the highest point around are taken from
+// the primary references.
 // It has a couple of frills.
 //  1. It scrambles the order of coordinates in the original simplex.
 //     This has minimises the effect of passenger (unimportant) coordinates.
-//  2. It expects a vector of minimum and maximum values. It will reject
-//     moves if they go beyond these boundaries
-
+//  2. It allows a vector of minimum and maximum values. It will reject
+//     moves if they go beyond these boundaries. This is done by wrapping
+//     the cost function.
+// Could be improved
+// * we call a full sort after each cycle. This is not necessary. One
+//   only needs a list with the highest, next-highest and best points.
+// * We re-calculate the centroid on each cycle. This is necessary, but
+//   the version in numerical recipes does it by removing the old best
+//   value and adding in the new one. In a few dimensions, it makes no
+//   difference. In many dimensions, one could argue the method in numerical
+//   recipes will be faster.
 // What I am working on, to do
 // * wrapper for cost function. If we have no upper and lower bounds,
 //   cost is just cost
 // * if we have bounds, then we use a wrapper. If no points are bounded,
 //   then call cost. If we have bounds, then check, if a point is out of
 //   bounds, then just return +inf or y[rank[0]] + 1.0
-
+// * Testing and examples
+//   * a 1D optimisation (x-2)^2, but with two dimensions. The second
+//     dimension does not do anything
+//   * shotgun testing - put an optimum in a few dimensions somewhere.
+//     do a loop over n times, in which we put the initial points all
+//     over the place
+//   * more dimensions - make a 10 D simplex, based on (x1-a)(x2-b)...
+//   * with bounds put the optimum at x=2. Put an upper bound at x=1
+//     then the initial points at x < 1. The system should creep up to
+//     the boundary
+//   * at the start, check the initial point does not exceed any bounds.
+//     Afterwards, this means that we can set y=y[ihi]+1 if we exceed a
+//     bound.
 package simplex
 
 import (
 	"errors"
 	"fmt"
+	"github.com/andrew-torda/goutil/matrix"
 	"math/rand"
 	"sort"
-	"github.com/andrew-torda/goutil/matrix"
 )
 
 const (
@@ -45,16 +72,16 @@ const (
 //
 type CostFun func(x []float32) (float32, error)
 type SplxCtrl struct {
-	maxstep  int       // cycles of the simplex
-	maxstart int       // complete restarts
-	lower    []float32 // bounds on the parameters
-	upper    []float32
-	bestPrm  []float32 // best params found so far
-	seed     int       // Seed for random number generator
-	scatter  float32   // Spread around initial simplex points
-	cost     CostFun   // the function to be optimised
-	testfun  CostFun
-	noPermute bool     // turn off permuting of simplex at setup
+	maxstep   int       // cycles of the simplex
+	maxstart  int       // complete restarts
+	lower     []float32 // bounds on the parameters
+	upper     []float32
+	bestPrm   []float32 // best params found so far
+	seed      int       // Seed for random number generator
+	scatter   float32   // Spread around initial simplex points
+	cost      CostFun   // the function to be optimised
+	testfun   CostFun
+	noPermute bool // turn off permuting of simplex at setup
 }
 
 // NewSimplex just gives us a structure with default values.
@@ -69,13 +96,18 @@ func NewSplxCtrl(cost CostFun, iniPrm []float32) *SplxCtrl {
 	return s
 }
 
-func (s *SplxCtrl) nopermute () {
+func (s *SplxCtrl) Seed(i int) {
+	s.seed = i
+}
+
+func (s *SplxCtrl) Nopermute() {
 	s.noPermute = true
 }
 
 // AddBounds lets one add a slice of lower or upper bounds for parameters.
 // If you specify bounds for one parameter, you have to specify bounds for
 // all.
+// If you only want upper bounds, set lower to nil and vice versa.
 func (s *SplxCtrl) AddBounds(lower []float32, upper []float32) error {
 	if len(lower) != 0 {
 		if len(lower) != len(s.bestPrm) {
@@ -102,7 +134,7 @@ func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 	nparam := len(s.bestPrm)
 	npoint := nparam + 1
 
-	splx := splx {matrix.NewFMatrix2d(npoint, nparam)}
+	splx := splx{matrix.NewFMatrix2d(npoint, nparam)}
 	for i := 0; i < nparam; i++ {
 		spread := s.bestPrm[i] * s.scatter
 		incrmt := spread / float32(nparam)
@@ -111,7 +143,7 @@ func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 			splx.Mat[j][i] = start + float32(j)*incrmt
 		}
 	}
-	if s.noPermute {  // for debugging, we may want to use
+	if s.noPermute { // for debugging, we may want to use
 		return splx // simplex unpermuted
 	}
 	for ip := 0; ip < nparam; ip++ { // permute elements in each dimension
@@ -186,6 +218,16 @@ func contract(splx splx, sWk sWk) {
 			splx.Mat[ix][j] = (splx.Mat[ix][j] + val) / 2.0
 		}
 	}
+}
+
+// newSwk sets up the arrays for a simplex work (sWk) structure
+func newSWk(npnt, ndim int) sWk {
+	var sWk sWk
+	sWk.y = make([]float32, npnt)
+	sWk.rank = make([]int, npnt)
+	sWk.cntrd = make([]float32, ndim)
+	sWk.ptrial = make([]float32, ndim)
+	return sWk
 }
 
 // onerun is the inner call to the simplex. It will be called with
