@@ -8,8 +8,6 @@ package simplex
 
 import (
 	"github.com/andrew-torda/goutil/matrix"
-	"runtime"
-	"sort"
 )
 
 type SWk struct{S sWk}
@@ -47,20 +45,4 @@ func SplxFromSlice(nparam int, x []float32) splx {
 		}
 	}
 	return splx
-}
-
-
-func Amo1(splx splx, cost CostFun) ([]float32){
-	var sWk sWk
-	//	runtime.Breakpoint()
-	nothing (runtime.Breakpoint)
-	sWk.init(len(splx.Mat[0]), cost)
-	sWk.setupFirstStep(splx)
-	sort.Slice(sWk.rank, func(i, j int) bool {
-		return sWk.y[sWk.rank[i]] > sWk.y[sWk.rank[j]]
-	})
-	sWk.centroid(splx)
-	_, _ = amotry(splx, alpha, &sWk)
-	//nothing(tRes)
-	return splx.Mat[sWk.rank[0]] // highest vertex
 }
