@@ -90,10 +90,15 @@ func NewSplxCtrl(cost CostFun, iniPrm []float32) *SplxCtrl {
 	s := new(SplxCtrl)
 	s.cost = cost
 	s.bestPrm = iniPrm
+	s.maxstep = 100
 	s.seed = randSeed
 	s.scatter = 0.1 // 10 % scatter means original +/- 5 %
 	rand.Seed(int64(s.seed))
 	return s
+}
+
+func (s *SplxCtrl) Maxstep (i int) {
+	s.maxstep = i
 }
 
 func (s *SplxCtrl) Seed(i int) {
@@ -129,7 +134,8 @@ type splx struct {
 	*matrix.FMatrix2d
 }
 
-// iniPoints will make our simplex and fill it with initial points
+// iniPoints allocates space for the actual simplex (a matrix) and
+// fills it with values.
 func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 	nparam := len(s.bestPrm)
 	npoint := nparam + 1
@@ -175,7 +181,7 @@ const (
 // If it succeeds, it tries to extend the operation.
 // This operation is the same, whether we are reflecting, extending or
 // doing a local contraction.
-func amotry(splx splx, fac float32, sWk sWk) (uint8, error) {
+func amotry(splx splx, fac float32, sWk *sWk) (uint8, error) {
 	ndim := len(sWk.cntrd)
 	ihi := sWk.rank[0]
 	for i := 0; i < ndim; i++ {
@@ -209,7 +215,7 @@ func (s *sWk) centroid(splx splx) {
 }
 
 // contract brings all points halfway towards the lowest point
-func contract(splx splx, sWk sWk) {
+func contract(splx splx, sWk *sWk) {
 	npoint := len(splx.Mat)
 	pntLow := splx.Mat[sWk.rank[npoint-1]] // best point
 	for i := 0; i < npoint-1; i++ {
@@ -221,36 +227,39 @@ func contract(splx splx, sWk sWk) {
 }
 
 // newSwk sets up the arrays for a simplex work (sWk) structure
-func newSWk(npnt, ndim int) sWk {
-	var sWk sWk
-	sWk.y = make([]float32, npnt)
-	sWk.rank = make([]int, npnt)
-	sWk.cntrd = make([]float32, ndim)
-	sWk.ptrial = make([]float32, ndim)
-	return sWk
-}
-
-// onerun is the inner call to the simplex. It will be called with
-// different starting points on each call.
-func (s *SplxCtrl) onerun(maxstep int) error {
-	var sWk sWk
-
-	splx := s.iniPoints()
-	ndim := len(s.bestPrm)
+func (sWk *sWk) init(ndim int, cost CostFun) {
 	npnt := ndim + 1
 	sWk.y = make([]float32, npnt)
 	sWk.rank = make([]int, npnt)
 	sWk.cntrd = make([]float32, ndim)
 	sWk.ptrial = make([]float32, ndim)
-	sWk.cost = s.cost
+	// Here is where we might add a wrapper around the cost function
+	sWk.cost = cost
+}
+
+// setupfirststep calculates values at the initial simplex vertices,
+// sorts them and so on. Putting it in its own function is important
+// so it can be called during testing.
+func (sWk *sWk) setupFirstStep(splx splx) error {
 	for i, v := range splx.Mat {
 		var err error
-		if sWk.y[i], err = s.cost(v); err != nil {
+		if sWk.y[i], err = sWk.cost(v); err != nil {
 			return fmt.Errorf("initialising simplex: %w", err)
 		}
 	}
 	for i := 0; i < len(sWk.rank); i++ {
 		sWk.rank[i] = i
+	}
+	return nil
+}
+
+// onerun is the inner call to the simplex. It will be called with
+// different starting points on each call.
+func (s *SplxCtrl) onerun(sWk *sWk, splx splx) error {
+	ndim := len(s.bestPrm)
+	npnt := ndim + 1
+	if err := sWk.setupFirstStep(splx); err != nil {
+		return fmt.Errorf("Setting up for first step: %w", err)
 	}
 
 	for n := 0; n < s.maxstep; n++ {
@@ -260,7 +269,7 @@ func (s *SplxCtrl) onerun(maxstep int) error {
 		ihi := sWk.rank[0]      // worst (hi) point
 		//		inxt := sWk.rank[1]     // next-best point
 		sort.Slice(sWk.rank, func(i, j int) bool {
-			return sWk.y[sWk.rank[i]] < sWk.y[sWk.rank[j]]
+			return sWk.y[sWk.rank[i]] > sWk.y[sWk.rank[j]]
 		})
 		sWk.centroid(splx)
 		if tRes, err = amotry(splx, alpha, sWk); err != nil {
@@ -294,8 +303,13 @@ func (s *SplxCtrl) onerun(maxstep int) error {
 func (s *SplxCtrl) Run(maxstep, maxstart int) error {
 	s.maxstep = maxstep
 	s.maxstart = maxstart
+	splx := s.iniPoints()
+	var sWk sWk
+	ndim := len(s.bestPrm)
+	sWk.init(ndim, s.cost)
 	for mr := 0; mr < maxstart; mr++ {
-		s.onerun(maxstep) // and here we give it new starting point
+		if err := s.onerun(&sWk, splx); err != nil {
+			return err}
 		s.scatter /= 2.
 	}
 	return nil
