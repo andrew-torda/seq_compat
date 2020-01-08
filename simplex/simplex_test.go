@@ -4,7 +4,6 @@ package simplex_test
 
 import (
 	"errors"
-	"fmt"
 	. "github.com/andrew-torda/goutil/simplex"
 	"math"
 	"testing"
@@ -15,6 +14,9 @@ import (
 // for testing.
 func slicesDiffer(x, y []float32) bool {
 	const eps = 0.00001
+	if len(x) != len(y) {
+		panic("program bug slice lengths differ")
+	}
 	for i, v := range x {
 		if math.Abs(float64(v-y[i])) > eps {
 			return true
@@ -104,7 +106,14 @@ func cost2(x []float32) (float32, error) {
 
 func nothing(interface{}) {}
 
-func costN (x []float32) (float32, error) {
+func TestSimplexStruct(t *testing.T) {
+	iniPrm := []float32{5, 5.1}
+	s := NewSplxCtrl(cost2, iniPrm)
+	s.Scatter(0.4)
+	s.Run(300, 3)
+}
+
+func costN(x []float32) (float32, error) {
 	var sum float32
 	for i := 0; i < len(x); i++ {
 		t := x[i] - float32(i+1)
@@ -112,21 +121,15 @@ func costN (x []float32) (float32, error) {
 	}
 	return sum, nil
 }
-
-func TestSimplexStruct(t *testing.T) {
-	cost := func(x []float32) (float32, error) {
-		return (x[1] - 1) * (x[1] - 1), nil }
-	nothing (cost)
-	iniPrm := []float32{5, 5.1}
-	s := NewSplxCtrl(cost2, iniPrm)
-	s.Scatter (0.4)
-	s.Run(300, 3)
-}
-
 func TestNDim(t *testing.T) {
-	iniPrm := []float32{10, 9, 8, 7, 6, 5, 4 }
+	iniPrm := []float32{10, 9, 8, 7, 6, 5, 4}
 	s := NewSplxCtrl(costN, iniPrm)
-	s.Scatter (0.4)
-	s.Run(300, 3)
-	fmt.Println ("best: ", s.BestPrm)
+	s.Scatter(0.4)
+	result, err := s.Run(5000, 2);
+	if err != nil {
+		t.Errorf("run failure in 7 dimensional test")
+	}
+	if slicesDiffer(result.BestPrm, []float32{1, 2, 3, 4, 5, 6, 7}) {
+		t.Errorf("7 dimensional test Fail")
+	}
 }

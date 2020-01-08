@@ -11,7 +11,7 @@ import (
 )
 
 type SWk struct{S sWk}
-func (s *SplxCtrl) Onerun(sWk *sWk, splx splx) error {
+func (s *SplxCtrl) Onerun(sWk *sWk, splx splx) (uint8, error) {
 	return s.onerun (sWk)
 }
 

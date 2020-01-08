@@ -54,9 +54,9 @@ import (
 )
 
 const (
-	Converged = iota
-	Maxsteps
-	Bounderror
+	Converged uint8 = iota // Stopped after converging
+	MaxSteps               // Stopped after max steps
+	Bust                   // Stopped after an error
 )
 
 const (
@@ -79,7 +79,7 @@ type SplxCtrl struct {
 	maxstart  int       // complete restarts
 	lower     []float32 // bounds on the parameters
 	upper     []float32
-	BestPrm   []float32 // best params found
+	iniPrm    []float32 // initial parameter guess
 	seed      int       // Seed for random number generator
 	scatter   float32   // Spread around initial simplex points
 	cost      CostFun   // the function to be optimised
@@ -89,28 +89,41 @@ type SplxCtrl struct {
 	noPermute bool // turn off permuting of simplex at setup
 }
 
+// Result is the structure used to pass results back to the caller
+type Result struct {
+	Ncycle     int       // How many times did we cycle
+	BestPrm    []float32 // best parameters found
+	StopReason uint8     // Reason why calculation stopped
+}
+
 // NewSimplex just gives us a structure with default values.
 // The cost function must be specified.
 func NewSplxCtrl(cost CostFun, iniPrm []float32) *SplxCtrl {
 	s := new(SplxCtrl)
 	s.cost = cost
-	s.BestPrm = iniPrm
+	s.iniPrm = iniPrm
 	s.maxstep = 100
-	s.tol = 1e-3
+	s.tol = 1e-10
 	s.seed = randSeed
 	s.scatter = 0.1 // 10 % scatter means original +/- 5 %
 	rand.Seed(int64(s.seed))
 	return s
 }
 
-func (s *SplxCtrl) Scatter(f float32) { s.scatter = f}
+// Scatter sets the scatter around the starting point in each dimension
+func (s *SplxCtrl) Scatter(f float32) { s.scatter = f }
 
+// Maxstep sets the maximum number of cycles
 func (s *SplxCtrl) Maxstep(i int) { s.maxstep = i }
 
+// Seed sets the random number seed used in permuting indices
 func (s *SplxCtrl) Seed(i int) { s.seed = i }
 
+// Nopermute turns off the permuting of initial values in the simplex.
+// This is only useful in debugging
 func (s *SplxCtrl) Nopermute() { s.noPermute = true }
 
+// Tol sets the convergence tolerance.
 func (s *SplxCtrl) Tol(f float32) { s.tol = f }
 
 // AddBounds lets one add a slice of lower or upper bounds for parameters.
@@ -119,13 +132,13 @@ func (s *SplxCtrl) Tol(f float32) { s.tol = f }
 // If you only want upper bounds, set lower to nil and vice versa.
 func (s *SplxCtrl) AddBounds(lower []float32, upper []float32) error {
 	if len(lower) != 0 {
-		if len(lower) != len(s.BestPrm) {
+		if len(lower) != len(s.iniPrm) {
 			return errors.New("lower bounds wrong dimensions")
 		}
 		s.lower = lower
 	}
 	if len(upper) != 0 {
-		if len(upper) != len(s.BestPrm) {
+		if len(upper) != len(s.iniPrm) {
 			return errors.New("upper bounds wrong dimensions")
 		}
 		s.upper = upper
@@ -141,14 +154,14 @@ type splx struct {
 // iniPoints allocates space for the actual simplex (a matrix) and
 // fills it with values.
 func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
-	nparam := len(s.BestPrm)
+	nparam := len(s.iniPrm)
 	npoint := nparam + 1
 
 	splx := splx{matrix.NewFMatrix2d(npoint, nparam)}
 	for i := 0; i < nparam; i++ {
-		spread := s.BestPrm[i] * s.scatter
+		spread := s.iniPrm[i] * s.scatter
 		incrmt := spread / float32(nparam)
-		start := s.BestPrm[i] - spread/2
+		start := s.iniPrm[i] - spread/2
 		for j := 0; j < npoint; j++ {
 			splx.Mat[j][i] = start + float32(j)*incrmt
 		}
@@ -200,7 +213,7 @@ func amotry(splx splx, fac float32, sWk *sWk) (uint8, error) {
 	}
 	copy(splx.Mat[ihi], sWk.ptrial) // save the yval and the trial move
 	sWk.y[ihi] = ytry
-	
+
 	return yesImprove, nil
 }
 
@@ -285,7 +298,6 @@ func (sWk *sWk) converged(tol float32) bool {
 	ylo := sWk.y[sWk.rank[n-1]]
 	rtol := (2 * fabs(yhi-ylo)) / (fabs(yhi) + fabs(ylo) + tiny)
 	if rtol < float64(tol) {
-		fmt.Println("converged to ", ylo)
 		return true
 	}
 	return false
@@ -308,7 +320,6 @@ func dbgdetail(sWk *sWk, splx splx, s string, fdbg *os.File) {
 	fmt.Fprintf(fdbg, "%v, %v", ihi, ilo)
 	for i := range splx.Mat {
 		for _, v := range splx.Mat[i] {
-//			if j != 1 { continue }
 			fmt.Fprintf(fdbg, ", %.2f", v)
 		}
 	}
@@ -318,8 +329,8 @@ func dbgdetail(sWk *sWk, splx splx, s string, fdbg *os.File) {
 
 // onerun is the inner call to the simplex. It will be called with
 // different starting points on each call.
-func (s *SplxCtrl) onerun(sWk *sWk) error {
-	ndim := len(s.BestPrm)
+func (s *SplxCtrl) onerun(sWk *sWk) (uint8, error) {
+	ndim := len(s.iniPrm)
 	npnt := ndim + 1
 	var fdbg *os.File
 	nothing(runtime.Breakpoint)
@@ -335,9 +346,9 @@ func (s *SplxCtrl) onerun(sWk *sWk) error {
 	}
 
 	if err := sWk.setupFirstStep(splx); err != nil {
-		return fmt.Errorf("Setting up for first step: %w", err)
+		return Bust, fmt.Errorf("Setting up for first step: %w", err)
 	}
-	fmt.Println ("starting simplex at \n", splx)
+	stopReason := MaxSteps
 	s.ncycle = s.maxstep
 	for n := 0; n < s.maxstep; n++ {
 		var tRes uint8
@@ -348,15 +359,15 @@ func (s *SplxCtrl) onerun(sWk *sWk) error {
 		ilo := sWk.rank[npnt-1] // best point
 		ihi := sWk.rank[0]      // worst (hi) point
 		if sWk.converged(s.tol) {
-			fmt.Println("converged n is ", n)
 			s.ncycle = n - 1
 			sWk.dbgDetail("close")
+			stopReason = Converged
 			break
 		}
 		sWk.centroid(splx)
 		sWk.dbgDetail("n")
 		if tRes, err = amotry(splx, alpha, sWk); err != nil {
-			return err
+			return Bust, err
 		}
 		if tRes == yesImprove {
 			if sWk.y[ihi] > sWk.y[ilo] {
@@ -364,7 +375,7 @@ func (s *SplxCtrl) onerun(sWk *sWk) error {
 				continue // just accept and move on
 			} // next, try extend
 			if tRes, err = amotry(splx, gamma, sWk); err != nil {
-				return err
+				return Bust, err
 			}
 			if tRes == yesImprove { // expansion worked
 				sWk.dbgDetail("e")
@@ -372,7 +383,7 @@ func (s *SplxCtrl) onerun(sWk *sWk) error {
 			}
 		} else { // 1D contract and then general contract
 			if tRes, err = amotry(splx, beta, sWk); err != nil {
-				return err
+				return Bust, err
 			}
 			if tRes == yesImprove {
 				sWk.dbgDetail("c")
@@ -385,23 +396,30 @@ func (s *SplxCtrl) onerun(sWk *sWk) error {
 
 	}
 	ilo := sWk.rank[npnt-1]
-	copy(s.BestPrm, splx.Mat[ilo])
-	return nil
+	copy(s.iniPrm, splx.Mat[ilo])
+	return stopReason, nil
 }
 
 // Run will do a run
-func (s *SplxCtrl) Run(maxstep, maxstart int) error {
+func (s *SplxCtrl) Run(maxstep, maxstart int) (Result, error) {
 	s.maxstep = maxstep
 	s.maxstart = maxstart
 	var sWk sWk
-	ndim := len(s.BestPrm)
+	ndim := len(s.iniPrm)
 	sWk.init(ndim, s.cost)
 	s.cost = nil // pointer has now been handed to the sWk structure
+	var stopReason uint8
 	for mr := 0; mr < maxstart; mr++ {
-		if err := s.onerun(&sWk); err != nil {
-			return err
+		var err error
+		if stopReason, err = s.onerun(&sWk); err != nil {
+			return Result {BestPrm:nil, Ncycle:0, StopReason:Bust}, err
 		}
-		s.scatter /= 2.
+		s.scatter /= 4.
 	}
-	return nil
+	result := Result{
+		BestPrm:    s.iniPrm,
+		Ncycle:     s.ncycle,
+		StopReason: stopReason,
+	}
+	return result, nil
 }
