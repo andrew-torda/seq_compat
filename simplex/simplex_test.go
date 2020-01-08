@@ -4,6 +4,7 @@ package simplex_test
 
 import (
 	"errors"
+	"fmt"
 	. "github.com/andrew-torda/goutil/simplex"
 	"math"
 	"testing"
@@ -15,7 +16,7 @@ import (
 func slicesDiffer(x, y []float32) bool {
 	const eps = 0.00001
 	for i, v := range x {
-		if math.Abs(float64(v - y[i])) > eps {
+		if math.Abs(float64(v-y[i])) > eps {
 			return true
 		}
 	}
@@ -30,23 +31,22 @@ func cost1(x []float32) (float32, error) {
 	return y, nil
 }
 
-// rotSl shuffles the elements of a slice
-func rotSl(f []float32) []float32 {
-	return (append(f[1:], f[0]))
-}
-
 func costR(x []float32) (float32, error) {
-	if (x[0] > 4) { return 10000, nil }
-	return (x[0] - 2) * (x[0] - 2), nil }
+	if x[0] > 4 {
+		return 10000, nil
+	}
+	return (x[0] - 2) * (x[0] - 2), nil
+}
 
 const shifter float32 = 0.5
 const jnk float32 = 100
-var tstPnt = [][]float32 {
+
+var tstPnt = [][]float32{
 	{
 		0.9, 1, jnk,
-		2-(2*shifter), 2, jnk,
+		2 - (2 * shifter), 2, jnk,
 		2, 1, jnk,
-		2+(2*shifter), 0, jnk,
+		2 + (2 * shifter), 0, jnk,
 	},
 	{
 		0.4, 1, jnk,
@@ -62,13 +62,15 @@ var tstPnt = [][]float32 {
 	},
 }
 
-var tstR1 = [][]float32 {
+var tstR1 = [][]float32{
 	{3.1, 1, 100},
-	{2.6, 1,100},
+	{2.6, 1, 100},
 	{-2.5, 1, 100},
 }
+
 // TestR2 is for checking reflections, extensions and 1D contraction.
 func TestR2(t *testing.T) {
+	return
 	iniPrm := []float32{0, 0, 0}
 	sctrl := NewSplxCtrl(cost2, iniPrm)
 	sctrl.Maxstep(1)
@@ -102,8 +104,29 @@ func cost2(x []float32) (float32, error) {
 
 func nothing(interface{}) {}
 
+func costN (x []float32) (float32, error) {
+	var sum float32
+	for i := 0; i < len(x); i++ {
+		t := x[i] - float32(i+1)
+		sum += t * t
+	}
+	return sum, nil
+}
+
 func TestSimplexStruct(t *testing.T) {
-	iniPrm := []float32{10, 20}
+	cost := func(x []float32) (float32, error) {
+		return (x[1] - 1) * (x[1] - 1), nil }
+	nothing (cost)
+	iniPrm := []float32{5, 5.1}
 	s := NewSplxCtrl(cost2, iniPrm)
-	s.Run(100, 3)
+	s.Scatter (0.4)
+	s.Run(300, 3)
+}
+
+func TestNDim(t *testing.T) {
+	iniPrm := []float32{10, 9, 8, 7, 6, 5, 4 }
+	s := NewSplxCtrl(costN, iniPrm)
+	s.Scatter (0.4)
+	s.Run(300, 3)
+	fmt.Println ("best: ", s.BestPrm)
 }

@@ -12,7 +12,7 @@ import (
 
 type SWk struct{S sWk}
 func (s *SplxCtrl) Onerun(sWk *sWk, splx splx) error {
-	return s.onerun (sWk, splx)
+	return s.onerun (sWk)
 }
 
 func (s *SWk) Init(ndim int, cost CostFun) {

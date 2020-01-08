@@ -48,6 +48,8 @@ import (
 	"github.com/andrew-torda/goutil/matrix"
 	"math"
 	"math/rand"
+	"os"
+	"runtime"
 	"sort"
 )
 
@@ -83,7 +85,7 @@ type SplxCtrl struct {
 	cost      CostFun   // the function to be optimised
 	testfun   CostFun
 	tol       float32
-	ncycle    int       // how many cycles did we do
+	ncycle    int  // how many cycles did we do
 	noPermute bool // turn off permuting of simplex at setup
 }
 
@@ -94,12 +96,14 @@ func NewSplxCtrl(cost CostFun, iniPrm []float32) *SplxCtrl {
 	s.cost = cost
 	s.BestPrm = iniPrm
 	s.maxstep = 100
-	s.tol = 1e-10
+	s.tol = 1e-3
 	s.seed = randSeed
 	s.scatter = 0.1 // 10 % scatter means original +/- 5 %
 	rand.Seed(int64(s.seed))
 	return s
 }
+
+func (s *SplxCtrl) Scatter(f float32) { s.scatter = f}
 
 func (s *SplxCtrl) Maxstep(i int) { s.maxstep = i }
 
@@ -162,11 +166,12 @@ func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 
 // sWk holds the scratch arrays for sums and ranks.
 type sWk struct {
-	cost   CostFun   // copy of cost function
-	y      []float32 // y values at each simplex point
-	cntrd  []float32 // centroid of all points, except worst
-	ptrial []float32 // trial point used in amotry
-	rank   []int     // sorted list of ranks of vertices
+	cost      CostFun   // copy of cost function
+	y         []float32 // y values at each simplex point
+	cntrd     []float32 // centroid of all points, except worst
+	ptrial    []float32 // trial point used in amotry
+	rank      []int     // sorted list of ranks of vertices
+	dbgDetail func(string)
 }
 
 func nothing(a interface{}) {}
@@ -185,15 +190,17 @@ func amotry(splx splx, fac float32, sWk *sWk) (uint8, error) {
 	for i := 0; i < ndim; i++ {
 		sWk.ptrial[i] = (1+fac)*sWk.cntrd[i] - fac*splx.Mat[ihi][i]
 	}
-	if ytry, err := sWk.cost(sWk.ptrial); err != nil {
+	var ytry float32
+	var err error
+	if ytry, err = sWk.cost(sWk.ptrial); err != nil {
 		return bustImprove, err
-	} else { // save the yval and the trial move
-		if ytry > sWk.y[ihi] { // no improvement
-			return noImprove, nil
-		}
-		copy(splx.Mat[ihi], sWk.ptrial)
-		sWk.y[ihi] = ytry
 	}
+	if ytry > sWk.y[ihi] {
+		return noImprove, nil
+	}
+	copy(splx.Mat[ihi], sWk.ptrial) // save the yval and the trial move
+	sWk.y[ihi] = ytry
+	
 	return yesImprove, nil
 }
 
@@ -253,15 +260,12 @@ func (sWk *sWk) setupFirstStep(splx splx) error {
 // updateContract updates the function values at all vertices, except
 // the best one, which was not changed during contraction
 func (sWk *sWk) updateContract(splx splx) error {
-	npoint := len(sWk.y) + 1
-	ilo := sWk.rank[npoint-1]
-	for i, v := range splx.Mat {
-		if i == ilo {
-			continue
-		}
+	npoint := len(sWk.y)
+	for i := 0; i < (npoint - 1); i++ {
 		var err error
-		if sWk.y[i], err = sWk.cost(v); err != nil {
-			return fmt.Errorf("initialising simplex: %w", err)
+		ix := sWk.rank[i]
+		if sWk.y[ix], err = sWk.cost(splx.Mat[ix]); err != nil {
+			return fmt.Errorf("updating after contract: %w", err)
 		}
 	}
 	return nil
@@ -281,20 +285,59 @@ func (sWk *sWk) converged(tol float32) bool {
 	ylo := sWk.y[sWk.rank[n-1]]
 	rtol := (2 * fabs(yhi-ylo)) / (fabs(yhi) + fabs(ylo) + tiny)
 	if rtol < float64(tol) {
-		fmt.Println ("converged to ", ylo)
+		fmt.Println("converged to ", ylo)
 		return true
 	}
 	return false
 }
 
+// dbgdetail is for debugging. It is part of a closure, so we can get to
+// the values in the simplex and working arrays.
+func dbgdetail(sWk *sWk, splx splx, s string, fdbg *os.File) {
+	if s == "close" {
+		fdbg.Close()
+		return
+	}
+	ihi := sWk.rank[0]
+	ilo := sWk.rank[len(sWk.y)-1]
+	for _, v := range sWk.y {
+		if _, err := fmt.Fprintf(fdbg, "%.2f, ", v); err != nil {
+			panic("Writing to debug file")
+		}
+	}
+	fmt.Fprintf(fdbg, "%v, %v", ihi, ilo)
+	for i := range splx.Mat {
+		for _, v := range splx.Mat[i] {
+//			if j != 1 { continue }
+			fmt.Fprintf(fdbg, ", %.2f", v)
+		}
+	}
+	fmt.Fprintf(fdbg, ", %s\n", s)
+
+}
+
 // onerun is the inner call to the simplex. It will be called with
 // different starting points on each call.
-func (s *SplxCtrl) onerun(sWk *sWk, splx splx) error {
+func (s *SplxCtrl) onerun(sWk *sWk) error {
 	ndim := len(s.BestPrm)
 	npnt := ndim + 1
+	var fdbg *os.File
+	nothing(runtime.Breakpoint)
+	{
+		var err error
+		if fdbg, err = os.Create("dbg"); err != nil {
+			panic("debugging code, create failure: " + err.Error())
+		}
+	}
+	splx := s.iniPoints()
+	sWk.dbgDetail = func(s string) {
+		dbgdetail(sWk, splx, s, fdbg)
+	}
+
 	if err := sWk.setupFirstStep(splx); err != nil {
 		return fmt.Errorf("Setting up for first step: %w", err)
 	}
+	fmt.Println ("starting simplex at \n", splx)
 	s.ncycle = s.maxstep
 	for n := 0; n < s.maxstep; n++ {
 		var tRes uint8
@@ -305,22 +348,26 @@ func (s *SplxCtrl) onerun(sWk *sWk, splx splx) error {
 		ilo := sWk.rank[npnt-1] // best point
 		ihi := sWk.rank[0]      // worst (hi) point
 		if sWk.converged(s.tol) {
-			fmt.Println ("converged n is ", n)
+			fmt.Println("converged n is ", n)
 			s.ncycle = n - 1
-			break;
+			sWk.dbgDetail("close")
+			break
 		}
 		sWk.centroid(splx)
+		sWk.dbgDetail("n")
 		if tRes, err = amotry(splx, alpha, sWk); err != nil {
 			return err
 		}
 		if tRes == yesImprove {
 			if sWk.y[ihi] > sWk.y[ilo] {
+				sWk.dbgDetail("r")
 				continue // just accept and move on
 			} // next, try extend
 			if tRes, err = amotry(splx, gamma, sWk); err != nil {
 				return err
 			}
 			if tRes == yesImprove { // expansion worked
+				sWk.dbgDetail("e")
 				continue
 			}
 		} else { // 1D contract and then general contract
@@ -328,10 +375,12 @@ func (s *SplxCtrl) onerun(sWk *sWk, splx splx) error {
 				return err
 			}
 			if tRes == yesImprove {
+				sWk.dbgDetail("c")
 				continue // 1 point contraction worked
 			}
 			contract(splx, sWk) // last option, general contraction
 			sWk.updateContract(splx)
+			sWk.dbgDetail("a")
 		}
 
 	}
@@ -344,13 +393,12 @@ func (s *SplxCtrl) onerun(sWk *sWk, splx splx) error {
 func (s *SplxCtrl) Run(maxstep, maxstart int) error {
 	s.maxstep = maxstep
 	s.maxstart = maxstart
-	splx := s.iniPoints()
 	var sWk sWk
 	ndim := len(s.BestPrm)
 	sWk.init(ndim, s.cost)
 	s.cost = nil // pointer has now been handed to the sWk structure
 	for mr := 0; mr < maxstart; mr++ {
-		if err := s.onerun(&sWk, splx); err != nil {
+		if err := s.onerun(&sWk); err != nil {
 			return err
 		}
 		s.scatter /= 2.
