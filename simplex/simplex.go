@@ -46,10 +46,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/andrew-torda/goutil/matrix"
-	"runtime"
 	"math"
 	"math/rand"
 	"os"
+	"runtime"
 	"sort"
 )
 
@@ -125,8 +125,8 @@ func (s *SplxCtrl) Tol(f float32) { s.tol = f }
 
 // Span sets the initial ranges for parameters
 func (s *SplxCtrl) Span(x []float32) error {
-	if (len (x) != len(s.iniPrm)) {
-		return errors.New ("Span error, length span != number of parameters")
+	if len(x) != len(s.iniPrm) {
+		return errors.New("Span error, length span != number of parameters")
 	}
 	s.span = x
 	return nil
@@ -134,7 +134,7 @@ func (s *SplxCtrl) Span(x []float32) error {
 
 // Upper adds upper bounds for parameters.
 // These are enforced by a wrapper at the start of Run()
-func (s *SplxCtrl) Upper (upper []float32) error {
+func (s *SplxCtrl) Upper(upper []float32) error {
 	nwant := string(len(s.iniPrm))
 	ngot := string(len(upper))
 	if len(upper) != len(s.iniPrm) {
@@ -143,8 +143,9 @@ func (s *SplxCtrl) Upper (upper []float32) error {
 	s.upper = upper
 	return nil
 }
+
 // Lower adds lower bounds for parameters, as for Upper
-func (s *SplxCtrl) Lower (lower []float32) error {
+func (s *SplxCtrl) Lower(lower []float32) error {
 	nwant := string(len(s.iniPrm))
 	ngot := string(len(lower))
 	if len(lower) != len(s.iniPrm) {
@@ -165,9 +166,9 @@ func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 	nparam := len(s.iniPrm)
 	npoint := nparam + 1
 	//  We might be given an amount of scatter, or ranges for each param
- 	nothing (runtime.Breakpoint)
+	nothing(runtime.Breakpoint)
 	if s.span == nil {
-		s.span = make ([]float32, len(s.iniPrm))
+		s.span = make([]float32, len(s.iniPrm))
 		for i := range s.iniPrm {
 			s.span[i] = s.scatter * s.iniPrm[i]
 		}
@@ -180,7 +181,7 @@ func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 		incrmt := spread / float32(nparam)
 		start := s.iniPrm[i] - spread/2
 		for j := 0; j < npoint; j++ {
-			splx.Mat[j][i] = start + float32(j) * incrmt
+			splx.Mat[j][i] = start + float32(j)*incrmt
 		}
 	}
 	if s.noPermute { // for debugging, we may want to use
@@ -421,12 +422,12 @@ func (s *SplxCtrl) onerun(sWk *sWk) (uint8, error) {
 // setupBounds is a wrapper (closure) around the original cost function.
 // If a point exceeds a bound, we return maxfloat32 which means the point
 // will be rejected.
-func (s *SplxCtrl) setupBounds () {
+func (s *SplxCtrl) setupBounds() {
 	if s.lower == nil && s.upper == nil {
 		return
 	}
 	origCost := s.cost
-	cost := func (x []float32) (float32, error) {
+	cost := func(x []float32) (float32, error) {
 		if s.upper != nil {
 			for i, v := range s.upper {
 				if x[i] > v {
@@ -451,7 +452,7 @@ func (s *SplxCtrl) Run(maxstart int) (Result, error) {
 	var sWk sWk
 	ndim := len(s.iniPrm)
 	s.setupBounds()
-		sWk.init(ndim, s.cost)
+	sWk.init(ndim, s.cost)
 	s.cost = nil // pointer has now been handed to the sWk structure
 	var stopReason uint8
 	for mr := 0; mr < maxstart; mr++ {
