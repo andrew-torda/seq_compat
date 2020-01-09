@@ -49,7 +49,6 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"runtime"
 	"sort"
 )
 
@@ -208,7 +207,7 @@ func amotry(splx splx, fac float32, sWk *sWk) (uint8, error) {
 	if ytry, err = sWk.cost(sWk.ptrial); err != nil {
 		return bustImprove, err
 	}
-	if ytry > sWk.y[ihi] {
+	if ytry >= sWk.y[ihi] {
 		return noImprove, nil
 	}
 	copy(splx.Mat[ihi], sWk.ptrial) // save the yval and the trial move
@@ -333,7 +332,6 @@ func (s *SplxCtrl) onerun(sWk *sWk) (uint8, error) {
 	ndim := len(s.iniPrm)
 	npnt := ndim + 1
 	var fdbg *os.File
-	nothing(runtime.Breakpoint)
 	{
 		var err error
 		if fdbg, err = os.Create("dbg"); err != nil {
@@ -412,7 +410,7 @@ func (s *SplxCtrl) Run(maxstep, maxstart int) (Result, error) {
 	for mr := 0; mr < maxstart; mr++ {
 		var err error
 		if stopReason, err = s.onerun(&sWk); err != nil {
-			return Result {BestPrm:nil, Ncycle:0, StopReason:Bust}, err
+			return Result{BestPrm: nil, Ncycle: 0, StopReason: Bust}, err
 		}
 		s.scatter /= 4.
 	}
