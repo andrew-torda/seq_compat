@@ -5,6 +5,11 @@
 *.so
 *.dylib
 
+# debugging output
+dbg
+dbg_hi.dat
+dbg_low.dat
+
 # Test binary, built with `go test -c`
 *.test
 
