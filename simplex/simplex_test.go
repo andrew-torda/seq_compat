@@ -3,7 +3,6 @@
 package simplex_test
 
 import (
-	"fmt"
 	. "github.com/andrew-torda/goutil/simplex"
 	"math"
 	"math/rand"
@@ -33,35 +32,7 @@ func costR(x []float32) (float32, error) {
 	return (x[0] - 2) * (x[0] - 2), nil
 }
 
-
 const jnk float32 = 100
-
-var tstPnt = [][]float32{
-	{
-		0.9, 1, jnk,
-		1, 2, jnk,
-		2, 1, jnk,
-		3, 0, jnk,
-	},
-	{
-		0.4, 1, jnk,
-		0.5, 2, jnk,
-		1.5, 1, jnk,
-		2.5, 0, jnk,
-	},
-	{
-		-6.5, 1, jnk,
-		0.5, 2, jnk,
-		1.5, 1, jnk,
-		2.5, 0, jnk,
-	},
-}
-
-var tstR1 = [][]float32{
-	{3.1, 1, 100},
-	{2.6, 1, 100},
-	{-2.5, 1, 100},
-}
 
 // costbounds is used in the bounds tests
 func costbounds(x []float32) (float32, error) {
@@ -76,28 +47,29 @@ func TestUpper(t *testing.T) {
 	iniPrm := []float32{1, 95, 95, 95}
 	s := NewSplxCtrl(costbounds, iniPrm, 300)
 	s.Span([]float32{1, 3, 3, 3})
-	s.Upper ([]float32{ubound, 100, 100, 100})
+	s.Upper([]float32{ubound, 100, 100, 100})
 	res, err := s.Run(1)
 	if err != nil {
 		panic("badly written test in TestUpper")
 	}
-	if slicesDiffer (res.BestPrm[:1], []float32{ubound}) {
-		t.Errorf ("TestUpper got %f for first element", res.BestPrm[:1])
+	if slicesDiffer(res.BestPrm[:1], []float32{ubound}) {
+		t.Errorf("TestUpper got %f for first element", res.BestPrm[:1])
 	}
 }
+
 // TestLower for lower bounds
 func TestLower(t *testing.T) {
 	const lbound float32 = 4
 	iniPrm := []float32{5, 110, 105, 105}
 	s := NewSplxCtrl(costbounds, iniPrm, 300)
 	s.Span([]float32{1, 3, 3, 3})
-	s.Lower ([]float32{lbound, 100, 100, 100})
+	s.Lower([]float32{lbound, 100, 100, 100})
 	res, err := s.Run(1)
 	if err != nil {
 		panic("badly written test in TestLower")
 	}
-	if slicesDiffer (res.BestPrm[:1], []float32{lbound}) {
-		t.Errorf ("TestUpper got %f for first element", res.BestPrm[:1])
+	if slicesDiffer(res.BestPrm[:1], []float32{lbound}) {
+		t.Errorf("TestUpper got %f for first element", res.BestPrm[:1])
 	}
 }
 
