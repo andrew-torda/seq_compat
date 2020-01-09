@@ -46,6 +46,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/andrew-torda/goutil/matrix"
+	"runtime"
 	"math"
 	"math/rand"
 	"os"
@@ -59,10 +60,10 @@ const (
 )
 
 const (
-	randSeed         = 1637 // default seed for permuting
-	alpha    float32 = 1
-	beta     float32 = -1 / 2.
-	gamma    float32 = -2
+	randSeed         = 1637    // default seed for permuting
+	alpha    float32 = 1       // Literature values for
+	beta     float32 = -1 / 2. // moving the worst vertex in
+	gamma    float32 = -2      // the simplex
 )
 
 // let's add
@@ -75,10 +76,10 @@ const (
 type CostFun func(x []float32) (float32, error)
 type SplxCtrl struct {
 	maxstep   int       // cycles of the simplex
-	maxstart  int       // complete restarts
 	lower     []float32 // bounds on the parameters
 	upper     []float32
 	iniPrm    []float32 // initial parameter guess
+	span      []float32 // initial range for each parameter
 	seed      int       // Seed for random number generator
 	scatter   float32   // Spread around initial simplex points
 	cost      CostFun   // the function to be optimised
@@ -97,11 +98,11 @@ type Result struct {
 
 // NewSimplex just gives us a structure with default values.
 // The cost function must be specified.
-func NewSplxCtrl(cost CostFun, iniPrm []float32) *SplxCtrl {
+func NewSplxCtrl(cost CostFun, iniPrm []float32, maxstep int) *SplxCtrl {
 	s := new(SplxCtrl)
 	s.cost = cost
 	s.iniPrm = iniPrm
-	s.maxstep = 100
+	s.maxstep = maxstep
 	s.tol = 1e-10
 	s.seed = randSeed
 	s.scatter = 0.1 // 10 % scatter means original +/- 5 %
@@ -111,9 +112,6 @@ func NewSplxCtrl(cost CostFun, iniPrm []float32) *SplxCtrl {
 
 // Scatter sets the scatter around the starting point in each dimension
 func (s *SplxCtrl) Scatter(f float32) { s.scatter = f }
-
-// Maxstep sets the maximum number of cycles
-func (s *SplxCtrl) Maxstep(i int) { s.maxstep = i }
 
 // Seed sets the random number seed used in permuting indices
 func (s *SplxCtrl) Seed(i int) { s.seed = i }
@@ -125,27 +123,38 @@ func (s *SplxCtrl) Nopermute() { s.noPermute = true }
 // Tol sets the convergence tolerance.
 func (s *SplxCtrl) Tol(f float32) { s.tol = f }
 
-// AddBounds lets one add a slice of lower or upper bounds for parameters.
-// If you specify bounds for one parameter, you have to specify bounds for
-// all.
-// If you only want upper bounds, set lower to nil and vice versa.
-func (s *SplxCtrl) AddBounds(lower []float32, upper []float32) error {
-	if len(lower) != 0 {
-		if len(lower) != len(s.iniPrm) {
-			return errors.New("lower bounds wrong dimensions")
-		}
-		s.lower = lower
+// Span sets the initial ranges for parameters
+func (s *SplxCtrl) Span(x []float32) error {
+	if (len (x) != len(s.iniPrm)) {
+		return errors.New ("Span error, length span != number of parameters")
 	}
-	if len(upper) != 0 {
-		if len(upper) != len(s.iniPrm) {
-			return errors.New("upper bounds wrong dimensions")
-		}
-		s.upper = upper
-	}
+	s.span = x
 	return nil
 }
 
-// splx is really just a dynamically allocated matrix from the matrix package.
+// Upper adds upper bounds for parameters.
+// These are enforced by a wrapper at the start of Run()
+func (s *SplxCtrl) Upper (upper []float32) error {
+	nwant := string(len(s.iniPrm))
+	ngot := string(len(upper))
+	if len(upper) != len(s.iniPrm) {
+		return errors.New("simplex wants" + nwant + "upper bounds. Got" + ngot)
+	}
+	s.upper = upper
+	return nil
+}
+// Lower adds lower bounds for parameters, as for Upper
+func (s *SplxCtrl) Lower (lower []float32) error {
+	nwant := string(len(s.iniPrm))
+	ngot := string(len(lower))
+	if len(lower) != len(s.iniPrm) {
+		return errors.New("simplex wants" + nwant + "lowerbounds. Got" + ngot)
+	}
+	s.lower = lower
+	return nil
+}
+
+// splx is a dynamically allocated matrix from the matrix package.
 type splx struct {
 	*matrix.FMatrix2d
 }
@@ -155,22 +164,33 @@ type splx struct {
 func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 	nparam := len(s.iniPrm)
 	npoint := nparam + 1
+	//  We might be given an amount of scatter, or ranges for each param
+ 	nothing (runtime.Breakpoint)
+	if s.span == nil {
+		s.span = make ([]float32, len(s.iniPrm))
+		for i := range s.iniPrm {
+			s.span[i] = s.scatter * s.iniPrm[i]
+		}
+		s.scatter = float32(math.NaN())
+	}
 
 	splx := splx{matrix.NewFMatrix2d(npoint, nparam)}
-	for i := 0; i < nparam; i++ {
-		spread := s.iniPrm[i] * s.scatter
+
+	for i, spread := range s.span {
 		incrmt := spread / float32(nparam)
 		start := s.iniPrm[i] - spread/2
 		for j := 0; j < npoint; j++ {
-			splx.Mat[j][i] = start + float32(j)*incrmt
+			splx.Mat[j][i] = start + float32(j) * incrmt
 		}
 	}
 	if s.noPermute { // for debugging, we may want to use
 		return splx // simplex unpermuted
 	}
+
 	for ip := 0; ip < nparam; ip++ { // permute elements in each dimension
 		for j, val := range rand.Perm(npoint) {
-			splx.Mat[val][ip], splx.Mat[j][ip] = splx.Mat[j][ip], splx.Mat[val][ip]
+			tmp := splx.Mat
+			tmp[val][ip], tmp[j][ip] = tmp[j][ip], tmp[val][ip]
 		}
 	}
 	return splx
@@ -398,13 +418,40 @@ func (s *SplxCtrl) onerun(sWk *sWk) (uint8, error) {
 	return stopReason, nil
 }
 
+// setupBounds is a wrapper (closure) around the original cost function.
+// If a point exceeds a bound, we return maxfloat32 which means the point
+// will be rejected.
+func (s *SplxCtrl) setupBounds () {
+	if s.lower == nil && s.upper == nil {
+		return
+	}
+	origCost := s.cost
+	cost := func (x []float32) (float32, error) {
+		if s.upper != nil {
+			for i, v := range s.upper {
+				if x[i] > v {
+					return math.MaxFloat32, nil
+				}
+			}
+		}
+		if s.lower != nil {
+			for i, v := range s.lower {
+				if x[i] < v {
+					return math.MaxFloat32, nil
+				}
+			}
+		}
+		return origCost(x)
+	}
+	s.cost = cost
+}
+
 // Run will do a run
-func (s *SplxCtrl) Run(maxstep, maxstart int) (Result, error) {
-	s.maxstep = maxstep
-	s.maxstart = maxstart
+func (s *SplxCtrl) Run(maxstart int) (Result, error) {
 	var sWk sWk
 	ndim := len(s.iniPrm)
-	sWk.init(ndim, s.cost)
+	s.setupBounds()
+		sWk.init(ndim, s.cost)
 	s.cost = nil // pointer has now been handed to the sWk structure
 	var stopReason uint8
 	for mr := 0; mr < maxstart; mr++ {
