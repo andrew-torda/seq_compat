@@ -137,7 +137,6 @@ func costN(x []float32) (float32, error) {
 
 // TestNDim is for an n-dimensional simplex where n is something like seven.
 func TestNDim(t *testing.T) {
-	return
 	iniPrm := []float32{10, 9, 8, 7, 6, 5, 4}
 	s := NewSplxCtrl(costN, iniPrm, 500)
 	s.Scatter(0.4)
@@ -147,5 +146,40 @@ func TestNDim(t *testing.T) {
 	}
 	if slicesDiffer(result.BestPrm, []float32{1, 2, 3, 4, 5, 6, 7}) {
 		t.Errorf("7 dimensional test Fail")
+	}
+}
+
+// TestSetupErr is to make sure that we really do flag an error when we set up with
+// a slice of the wrong dimension.
+func TestSetupErr(t *testing.T) {
+	s := NewSplxCtrl(costN, []float32{1, 2, 3}, 100)
+	err := s.Span([]float32{1, 2, 3, 4})
+	if err == nil {
+		t.Errorf("slice check failed")
+	}
+}
+
+// TestCvgFlat invokes the code to keep contracting when we hit a flat region
+// of the cost function.
+// Check the second convergence criterion, which is helpful on a flat surface.
+// This is no longer a real test. I checked the values in a debugger, but you have
+// to look at the entries in the simplex and these are hidden from the outside world.
+func TestCvgFlat(t *testing.T) {
+	iniPrm := []float32{2, 1, 1}
+	costflat := func(x []float32) (float32, error) {
+		if x[0] < 1 {
+			return 1 - x[0], nil
+		}
+		if x[0] > 3 {
+			return x[0] - 3, nil
+		}
+		return 0, nil
+	}
+	s := NewSplxCtrl(costflat, iniPrm, 300)
+	s.Span([]float32{2.1, 1, 1})
+	s.Ptol([]float32{0.01, 0.01, 0.01})
+	r, _ := s.Run(1)
+	if r.BestPrm[0] < 1 || r.BestPrm[0] > 3 {
+		t.Errorf("TestCvgFlat broke")
 	}
 }

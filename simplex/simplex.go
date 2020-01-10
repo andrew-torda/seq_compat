@@ -22,11 +22,6 @@
 //   difference. In many dimensions, one could argue the method in numerical
 //   recipes will be faster.
 // What I am working on, to do
-// * wrapper for cost function. If we have no upper and lower bounds,
-//   cost is just cost
-// * if we have bounds, then we use a wrapper. If no points are bounded,
-//   then call cost. If we have bounds, then check, if a point is out of
-//   bounds, then just return +inf or y[rank[0]] + 1.0
 // * Testing and examples
 //   * a 1D optimisation (x-2)^2, but with two dimensions. The second
 //     dimension does not do anything
@@ -43,13 +38,11 @@
 package simplex
 
 import (
-	"errors"
 	"fmt"
 	"github.com/andrew-torda/goutil/matrix"
 	"math"
 	"math/rand"
 	"os"
-	"runtime"
 	"sort"
 )
 
@@ -80,6 +73,7 @@ type SplxCtrl struct {
 	upper     []float32
 	iniPrm    []float32 // initial parameter guess
 	span      []float32 // initial range for each parameter
+	pTol      []float32 // optional tolerance for each parameter.
 	seed      int       // Seed for random number generator
 	scatter   float32   // Spread around initial simplex points
 	cost      CostFun   // the function to be optimised
@@ -103,11 +97,23 @@ func NewSplxCtrl(cost CostFun, iniPrm []float32, maxstep int) *SplxCtrl {
 	s.cost = cost
 	s.iniPrm = iniPrm
 	s.maxstep = maxstep
-	s.tol = 1e-10
+	s.tol = 1e-8
 	s.seed = randSeed
 	s.scatter = 0.1 // 10 % scatter means original +/- 5 %
 	rand.Seed(int64(s.seed))
 	return s
+}
+
+// checklen is used in the set functions which take a slice (usually of float32's).
+func checklen (name string, got []float32, want []float32) error {
+	ngot := len (got)
+	nwant := len (want)
+	if ngot != nwant {
+		e := fmt.Errorf ("checking parameter \"name\". Length mismatch. Got %d. Wanted %d",
+			ngot, nwant)
+		return e
+	}
+	return nil
 }
 
 // Scatter sets the scatter around the starting point in each dimension
@@ -125,32 +131,39 @@ func (s *SplxCtrl) Tol(f float32) { s.tol = f }
 
 // Span sets the initial ranges for parameters
 func (s *SplxCtrl) Span(x []float32) error {
-	if len(x) != len(s.iniPrm) {
-		return errors.New("Span error, length span != number of parameters")
+	if err := checklen ("span", x, s.iniPrm); err != nil {
+		return err
 	}
 	s.span = x
 	return nil
 }
 
+// Ptol sets a tolerance for each parameter. It is optional. If the tol criterion is met,
+// then we can ask in each dimension if the x_min - x_max is smaller than some value.
+// This is only useful for noisy cost functions and will make the simplex keep
+// contracting a bit more.
+func (s *SplxCtrl ) Ptol (pTol []float32) error {
+	if err := checklen ("pTol", pTol, s.iniPrm); err != nil {
+		return err
+	}
+	s.pTol = pTol
+	return nil
+}
+	
+
 // Upper adds upper bounds for parameters.
 // These are enforced by a wrapper at the start of Run()
 func (s *SplxCtrl) Upper(upper []float32) error {
-	nwant := string(len(s.iniPrm))
-	ngot := string(len(upper))
-	if len(upper) != len(s.iniPrm) {
-		return errors.New("simplex wants" + nwant + "upper bounds. Got" + ngot)
-	}
+	if err := checklen ("upper", upper, s.iniPrm); err != nil {
+		return err
+	}	
 	s.upper = upper
 	return nil
 }
 
 // Lower adds lower bounds for parameters, as for Upper
 func (s *SplxCtrl) Lower(lower []float32) error {
-	nwant := string(len(s.iniPrm))
-	ngot := string(len(lower))
-	if len(lower) != len(s.iniPrm) {
-		return errors.New("simplex wants" + nwant + "lowerbounds. Got" + ngot)
-	}
+	if err := checklen ("lower", lower, s.iniPrm); err != nil { return err}
 	s.lower = lower
 	return nil
 }
@@ -166,7 +179,6 @@ func (s *SplxCtrl) iniPoints() splx { //*matrix.FMatrix2d {
 	nparam := len(s.iniPrm)
 	npoint := nparam + 1
 	//  We might be given an amount of scatter, or ranges for each param
-	nothing(runtime.Breakpoint)
 	if s.span == nil {
 		s.span = make([]float32, len(s.iniPrm))
 		for i := range s.iniPrm {
@@ -206,8 +218,6 @@ type sWk struct {
 	rank      []int     // sorted list of ranks of vertices
 	dbgDetail func(string)
 }
-
-func nothing(a interface{}) {}
 
 const (
 	yesImprove uint8 = iota // reflection or expansion improved worst point
@@ -271,7 +281,6 @@ func (sWk *sWk) init(ndim int, cost CostFun) {
 	sWk.rank = make([]int, npnt)
 	sWk.cntrd = make([]float32, ndim)
 	sWk.ptrial = make([]float32, ndim)
-	// Here is where we might add a wrapper around the cost function
 	sWk.cost = cost
 }
 
@@ -309,18 +318,29 @@ func fabs(x float32) float64 {
 	return math.Abs(float64(x))
 }
 
-// converged returns true if we have converged. Use the criterion
-// from the implementation in numerical recipes.
-func (sWk *sWk) converged(tol float32) bool {
+// converged returns true if we have converged. Use the criterion from numerical
+// recipes first to decide based on the cost function at the best and worst values.
+// Optionally keep contracting if the pTol slice has been set.
+func (sWk *sWk) converged(splx splx, tol float32, pTol []float32) bool {
 	const tiny = 1e-40
 	yhi := sWk.y[sWk.rank[0]]
 	n := len(sWk.y)
 	ylo := sWk.y[sWk.rank[n-1]]
 	rtol := (2 * fabs(yhi-ylo)) / (fabs(yhi) + fabs(ylo) + tiny)
-	if rtol < float64(tol) {
-		return true
+	if rtol > float64(tol) {
+		return false
 	}
-	return false
+	if pTol != nil {
+		hiPnt := splx.Mat[sWk.rank[0]]
+		loPnt := splx.Mat[sWk.rank[n - 1]]
+		for i := range hiPnt {
+			if math.Abs(float64(hiPnt[i] - loPnt[i])) > float64(pTol[i]) {
+				return false
+			}
+		}
+	}
+	return true
+
 }
 
 // dbgdetail is for debugging. It is part of a closure, so we can get to
@@ -377,8 +397,8 @@ func (s *SplxCtrl) onerun(sWk *sWk) (uint8, error) {
 		})
 		ilo := sWk.rank[npnt-1] // best point
 		ihi := sWk.rank[0]      // worst (hi) point
-		if sWk.converged(s.tol) {
-			s.ncycle = n - 1
+		if sWk.converged(splx, s.tol, s.pTol) {
+			s.ncycle = n
 			sWk.dbgDetail("close")
 			stopReason = Converged
 			break
@@ -422,6 +442,9 @@ func (s *SplxCtrl) onerun(sWk *sWk) (uint8, error) {
 // setupBounds is a wrapper (closure) around the original cost function.
 // If a point exceeds a bound, we return maxfloat32 which means the point
 // will be rejected.
+// We only need to return the function value at the worst point + some
+// positive delta, but this would require passing extra information into
+// the cost function. 
 func (s *SplxCtrl) setupBounds() {
 	if s.lower == nil && s.upper == nil {
 		return
