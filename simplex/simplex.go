@@ -22,16 +22,6 @@
 //   difference. In many dimensions, one could argue the method in numerical
 //   recipes will be faster.
 // What I am working on, to do
-// * Testing and examples
-//   * a 1D optimisation (x-2)^2, but with two dimensions. The second
-//     dimension does not do anything
-//   * shotgun testing - put an optimum in a few dimensions somewhere.
-//     do a loop over n times, in which we put the initial points all
-//     over the place
-//   * more dimensions - make a 10 D simplex, based on (x1-a)(x2-b)...
-//   * with bounds put the optimum at x=2. Put an upper bound at x=1
-//     then the initial points at x < 1. The system should creep up to
-//     the boundary
 //   * at the start, check the initial point does not exceed any bounds.
 //     Afterwards, this means that we can set y=y[ihi]+1 if we exceed a
 //     bound.
@@ -230,6 +220,8 @@ const (
 func amotry(splx splx, fac float32, sWk *sWk) (uint8, error) {
 	ndim := len(sWk.cntrd)
 	ihi := sWk.rank[0]
+	i2nd := sWk.rank[1] // second best point
+
 	for i := 0; i < ndim; i++ {
 		sWk.ptrial[i] = (1+fac)*sWk.cntrd[i] - fac*splx.Mat[ihi][i]
 	}
@@ -238,7 +230,7 @@ func amotry(splx splx, fac float32, sWk *sWk) (uint8, error) {
 	if ytry, err = sWk.cost(sWk.ptrial); err != nil {
 		return bustImprove, err
 	}
-	if ytry >= sWk.y[ihi] {
+	if ytry >= sWk.y[i2nd] {
 		return noImprove, nil
 	}
 	copy(splx.Mat[ihi], sWk.ptrial) // save the yval and the trial move
