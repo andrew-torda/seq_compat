@@ -4,6 +4,7 @@ package simplex_test
 
 import (
 	. "github.com/andrew-torda/goutil/simplex"
+	"fmt"
 	"math"
 	"math/rand"
 	"testing"
@@ -138,14 +139,15 @@ func costN(x []float32) (float32, error) {
 // TestNDim is for an n-dimensional simplex where n is something like seven.
 func TestNDim(t *testing.T) {
 	iniPrm := []float32{10, 9, 8, 7, 6, 5, 4}
-	s := NewSplxCtrl(costN, iniPrm, 500)
+	s := NewSplxCtrl(costN, iniPrm, 800)
 	s.Scatter(0.4)
 	result, err := s.Run(1)
 	if err != nil {
 		t.Errorf("run failure in 7 dimensional test")
 	}
 	if slicesDiffer(result.BestPrm, []float32{1, 2, 3, 4, 5, 6, 7}) {
-		t.Errorf("7 dimensional test Fail")
+		s := fmt.Sprintln (result.BestPrm)
+		t.Errorf("7 dimensional test Fail reached " + s)
 	}
 }
 
