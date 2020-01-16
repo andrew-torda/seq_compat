@@ -3,10 +3,11 @@
 package simplex_test
 
 import (
-	. "github.com/andrew-torda/goutil/simplex"
 	"fmt"
+	. "github.com/andrew-torda/goutil/simplex"
 	"math"
 	"math/rand"
+	"os"
 	"testing"
 )
 
@@ -82,8 +83,6 @@ func cost2(x []float32) (float32, error) {
 	return (a * a) + (b * b), nil
 }
 
-func nothing(interface{}) {}
-
 func TestSimplexStruct(t *testing.T) {
 	const a float32 = 5
 	const b float32 = 5.1
@@ -95,14 +94,15 @@ func TestSimplexStruct(t *testing.T) {
 	correct := []float32{1, 5}
 	for i := 0; i < 10; i++ { // Test with randomised starting points
 		iniPrm := []float32{noise50(a), noise50(b)}
-		s := NewSplxCtrl(cost2, iniPrm, 300)
+		s := NewSplxCtrl(cost2, iniPrm, 200)
 		s.Scatter(0.4)
 		res, err := s.Run(2)
 		if err != nil {
 			t.Errorf("prog bug testing")
 		}
 		if slicesDiffer(correct, res.BestPrm) {
-			t.Errorf("simplex result got %v wanted %v", res.BestPrm, correct)
+			t.Errorf("simplex got %v wanted %v starting from %v repetition %v",
+				res.BestPrm, correct, iniPrm, i)
 		}
 	}
 }
@@ -146,7 +146,7 @@ func TestNDim(t *testing.T) {
 		t.Errorf("run failure in 7 dimensional test")
 	}
 	if slicesDiffer(result.BestPrm, []float32{1, 2, 3, 4, 5, 6, 7}) {
-		s := fmt.Sprintln (result.BestPrm)
+		s := fmt.Sprintln(result.BestPrm)
 		t.Errorf("7 dimensional test Fail reached " + s)
 	}
 }
@@ -183,5 +183,107 @@ func TestCvgFlat(t *testing.T) {
 	r, _ := s.Run(1)
 	if r.BestPrm[0] < 1 || r.BestPrm[0] > 3 {
 		t.Errorf("TestCvgFlat broke")
+	}
+}
+
+//costerr is a silly cost function
+func costerr([]float32) (float32, error) {
+	return 1, fmt.Errorf("Artificial error to check code")
+}
+
+// TestCostErr checks if errors really get passed back from the cost function
+func TestCostErr(t *testing.T) {
+	iniPrm := []float32{1, 1, 1}
+	s := NewSplxCtrl(costerr, iniPrm, 100)
+	_, err := s.Run(2)
+	if err == nil {
+		t.Errorf("Should have passed error back to caller")
+	}
+}
+
+func costlinear(x []float32) (r float32, err error) {
+	if x[0] < 0 {
+		r = -2.0 * x[0]
+	} else {
+		r = x[0]
+	}
+	return r, nil
+}
+
+func TestA1(t *testing.T) {
+	iniPrm := []float32{-1, 99}
+	s := NewSplxCtrl(costlinear, iniPrm, 100)
+	s.Span([]float32{2, 1e-7})
+	r, _ := s.Run(1)
+	if slicesDiffer(r.BestPrm[:1], []float32{0}) {
+		t.Errorf("testA1 got %v not %v", r.BestPrm, "zeroes")
+	}
+}
+
+func multilinear(x []float32) (r float32, err error) {
+	var sum float32 = 0
+	for _, v := range x {
+		if v < 0 {
+			sum += -2.0 * v
+		} else {
+			sum += v
+		}
+	}
+	return sum, nil
+}
+
+func TestA2(t *testing.T) {
+	const historyFile string = "historyFile"
+	iniPrm := []float32{-1, 5, -10}
+	s := NewSplxCtrl(multilinear, iniPrm, 100)
+	s.Span([]float32{3, 3, 3})
+	s.HstryFname(historyFile)
+	s.IniType(IniClassic)
+	s.Tol(0.001)
+	r, _ := s.Run(2)
+	zeroes := make([]float32, len(iniPrm))
+	if slicesDiffer(r.BestPrm, zeroes) {
+		t.Errorf("testA2 got %v not %v", r.BestPrm, "zeroes")
+	}
+	os.Remove(historyFile)
+}
+
+func innerlinear(x float32) float32 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// TestDimensions has a look if everything works, even when the important dimension
+// changes. Don't care about dimensions so much, but about indexing.
+func TestDimensions(t *testing.T) {
+	const (
+		ndim        int     = 5
+		spanconst   float32 = 5
+		iniPrmRange         = 20
+		eps         float64 = 0.001
+	)
+	span := make([]float32, ndim)
+	for j := range span {
+		span[j] = spanconst
+	}
+	iniPrm := make([]float32, ndim)
+	for i := 0; i < ndim; i++ {
+		for i := range iniPrm {
+			x := rand.Float32()
+			x = x - 0.5
+			iniPrm[i] = x * iniPrmRange
+		}
+		cost := func(x []float32) (float32, error) {
+			return innerlinear(x[i]), nil
+		}
+		s := NewSplxCtrl(cost, iniPrm, 100)
+		s.Span(span)
+		r, _ := s.Run(2)
+		if math.Abs(float64(r.BestPrm[i])) > eps {
+			t.Errorf("TestDimensions dimension %d should be near 0.0, got %f",
+				i, r.BestPrm[i])
+		}
 	}
 }
