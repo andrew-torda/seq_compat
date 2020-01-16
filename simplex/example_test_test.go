@@ -12,7 +12,6 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"runtime"
 )
 
 func quadratic(a, b, c float32, x float32) (r float32) {
@@ -115,7 +114,6 @@ func Example_CostTest() {
 	costfun, testfun := makeCostTest()
 	iniPrm := []float32{2, 5, -25}
 	sctrl := simplex.NewSplxCtrl(costfun, iniPrm, 500)
-	nothing(runtime.Breakpoint)
 	sctrl.Span([]float32{.5, .5, .5})
 	testFname, _ := tmpfname()
 	historyFname, _ := tmpfname()
