@@ -129,8 +129,8 @@ func Example_CostTest() {
 		fmt.Println("Example_CostTest", err)
 		return
 	}
-    if r.StopReason != simplex.Converged {
-		fmt.Println ("CostTest really should converge")
+	if r.StopReason != simplex.Converged {
+		fmt.Println("CostTest really should converge")
 	}
 	if sz(testFname) < 100 {
 		fmt.Println("output in test data too small")
