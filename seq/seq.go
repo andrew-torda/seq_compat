@@ -22,7 +22,6 @@ type Seq struct {
 	seq  []byte
 }
 
-
 type Seq_type byte
 
 // DNA or RNA or protein ?
@@ -31,14 +30,18 @@ const (
 	Protein
 )
 
+const (
+	MaxSym = 128
+)
+
 // Options contains all the choices passed in from the caller.
 type Options struct {
-	Vbsty      int
-	Dsbl_merge bool // disable merging of sequences
-	Dry_run    bool // Do not write any files
-	Keep_gaps  bool // Keep gaps upon reading
-	Min_ovlp   int  // minimimum overlap of sequences
-	Rmv_gaps   bool // Remove gaps on output
+	Vbsty int
+	//	Dsbl_merge bool // disable merging of sequences
+	Dry_run   bool // Do not write any files
+	Keep_gaps bool // Keep gaps upon reading
+	//	Min_ovlp   int  // minimimum overlap of sequences
+	Rmv_gaps bool // Remove gaps on output
 }
 
 // These const types are what the compare function can return when it
@@ -88,46 +91,6 @@ func cmp_with_gaps(s, t Seq) int {
 	return Ident_remove_scnd
 }
 
-// Compare acts on a sequence s and compares it to sequence t.
-// It does lots of checks and returns one of the constant values defined
-// above.
-func Compare(s, t Seq, s_opts *Options) (sim int, s_merged []byte) {
-	if s.Empty() || t.Empty() {
-		return No_sim, nil
-	}
-	s_len, t_len := s.size(), t.size()
-	if s_len == t_len { //     Could be that they
-		if bytes.Equal(s.seq, t.seq) { // really are identical or
-			return Identical, nil
-		} else if s_opts.Keep_gaps { // a gapped alignment makes them the same length
-			differ := cmp_with_gaps(s, t)
-			switch differ {
-			case Ident_remove_frst:
-				return Ident_remove_frst, nil
-			case Ident_remove_scnd:
-				return Ident_remove_scnd, nil
-			}
-		}
-	}
-
-	if s_len < t_len {
-		if t.Contains(s) {
-			return S_in_t, nil
-		}
-	} else {
-		if s.Contains(t) {
-			return T_in_s, nil
-		}
-	}
-	if !s_opts.Dsbl_merge { // if merging  has not been disabled,
-		var ovlp_siz int
-		if s.ovlp_exists(t, &ovlp_siz, s_opts.Min_ovlp) {
-			return Ovlp_merged, s.merge(t, ovlp_siz)
-		}
-	}
-	return No_sim, nil
-}
-
 // seq.Get_cmmt returns the comment from a sequence
 func (s Seq) get_cmmt() string {
 	return s.cmmt[:]
@@ -139,8 +102,11 @@ func (s Seq) get_seq() []byte {
 	return s.seq
 }
 
-// Fix me
-func (s Seq) Get_seq ()  []byte {return s.get_seq()}
+// Function GetSeq returns the sequence as the original byte slice
+func (s Seq) GetSeq() []byte { return s.seq }
+
+// Function GetCmmt returns the comment, including the leading ">"
+func (s Seq) GetCmmt() string { return s.cmmt }
 
 // Size returns the size of a sequence
 func (s Seq) size() int {
@@ -365,7 +331,7 @@ func lump_split(b []byte, white []bool, scnr *myscanner) (seq Seq, err error) {
 // It should work with utf-8 files.
 // This should not be the case with sequences, but it might be the case with comments.
 // The function will stop reading if it encounters an error.
-func readSeqs(fname string, seq_set []Seq, seq_map map[string]int, s_opts *Options) (seq_out []Seq, n_dup int, err error) {
+func ReadSeqs(fname string, seq_set []Seq, seq_map map[string]int, s_opts *Options) (seq_out []Seq, n_dup int, err error) {
 	fp, err := os.Open(fname)
 	if err != nil {
 		return
@@ -375,7 +341,7 @@ func readSeqs(fname string, seq_set []Seq, seq_map map[string]int, s_opts *Optio
 	{ // Our scanner eats '>' characters, but our
 		var btmp byte // first line has not been through scanner,
 		if btmp, err = s.bufio_reader.ReadByte(); err != nil {
-			return //            so we jump over first character.
+			return //    so we jump over first character.
 		}
 		if btmp != cmmt_char { // Since we are here, we can check the file format
 			err = fmt.Errorf("First byte in file was not a comment character")
@@ -466,7 +432,7 @@ func Readfiles(fname []string, s_opts *Options) (seq_set []Seq, n_dup int, err e
 	seq_set = make([]Seq, 0, 0)
 	for _, f := range fname {
 		n_dup_onefile := 0
-		if seq_set, n_dup_onefile, err = readSeqs(f, seq_set[:], seq_map, s_opts); err != nil {
+		if seq_set, n_dup_onefile, err = ReadSeqs(f, seq_set[:], seq_map, s_opts); err != nil {
 			return seq_set, n_dup, fmt.Errorf("file %s: %v", f, err)
 		}
 		n_dup += n_dup_onefile
@@ -538,19 +504,18 @@ func Write_to_f(outseq_fname string, seq_set []Seq, s_opts *Options) (err error)
 	return
 }
 
-
 // Copy
 func (s *Seq) Copy() (t Seq) {
-	t = *new (Seq)
+	t = *new(Seq)
 	t.cmmt = s.cmmt
-	t.Set_seq (s.get_seq())
+	t.Set_seq(s.get_seq())
 	return t
 }
 
 // String
 func (s Seq) String() (t string) {
-	if (len(s.cmmt) > 0) {
-		t = fmt.Sprintf ("%c%s\n", cmmt_char, s.get_cmmt())
+	if len(s.cmmt) > 0 {
+		t = fmt.Sprintf("%c%s\n", cmmt_char, s.get_cmmt())
 	}
 	t += string(s.get_seq())
 	return
@@ -563,7 +528,7 @@ func (s *Seq) CharUsed() (n int) {
 	for _, c := range s.get_seq() {
 		used[c] = true
 	}
-	
+
 	for _, t := range used {
 		if t == true {
 			n++
