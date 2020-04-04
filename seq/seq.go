@@ -185,6 +185,37 @@ func (s Seq) Lower() {
 	}
 }
 
+// trimBytes trims a slice to n bytes if it is longer
+func trimStr(s string, n int) string {
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
+}
+
+// SeqUpper changes a sequence to upper case, in place.
+// It only works with bytes, not runes.
+// It can return an error if it encounters a symbol it does
+// not like (value higher than 128).
+func (seq Seq) Upper() error {
+	const diff = 'a' - 'A'
+	const symerr = "bad sym \"%c\" at position %d starting %s"
+	s := seq.GetSeq()
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= MaxSym {
+			t := seq.GetCmmt()
+			t = trimStr(t, 40)
+			e := fmt.Errorf(symerr, c, i, t)
+			return e
+		}
+		if 'a' <= c && c <= 'z' {
+			s[i] -= diff
+		}
+	}
+	return nil
+}
+
 // myscanner is used when reading sequences.
 // It it tied to a bufio.Reader, which is really a read-only file.
 // b is where pieces of text are read into and then split into comment

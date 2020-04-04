@@ -1,4 +1,4 @@
-module githup.com/andrew-torda/goutil
+module github.com/andrew-torda/goutil
 
 go 1.14
 
