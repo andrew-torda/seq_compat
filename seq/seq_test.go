@@ -1,8 +1,8 @@
 package seq_test
 
 import (
-	. "github.com/andrew-torda/goutil/seq"
 	"fmt"
+	. "github.com/andrew-torda/goutil/seq"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -74,9 +74,8 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 	defer os.Remove(f_tmp.Name())
 	s_opts := &Options{
 		Vbsty: 0, Keep_gaps: false,
-		Dsbl_merge: false,
-		Dry_run:    true,
-		Min_ovlp:   50, Rmv_gaps: true}
+		Dry_run:  true,
+		Rmv_gaps: true}
 	var names = []string{f_tmp.Name()}
 	seq_set, n_dup, err := Readfiles(names, s_opts)
 	if err != nil {
