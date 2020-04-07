@@ -2,10 +2,12 @@ package seq_test
 
 import (
 	"fmt"
-	. "github.com/andrew-torda/goutil/seq"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	. "github.com/andrew-torda/goutil/seq"
 )
 
 const (
@@ -65,6 +67,7 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 	if err != nil {
 		t.Fatalf("tempfile %v: %s", f_tmp, err)
 	}
+	defer f_tmp.Close()
 	switch spaces {
 	case no_spaces:
 		writeTest_nospaces(f_tmp)
@@ -77,19 +80,19 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 		Dry_run:  true,
 		Rmv_gaps: true}
 	var names = []string{f_tmp.Name()}
-	seq_set, n_dup, err := Readfiles(names, s_opts)
+	seqgrp, n_dup, err := Readfiles(names, s_opts)
 	if err != nil {
 		t.Fatalf("Reading seqs failed %v", err)
 	}
-	if len(seq_set) != len(seq_lengths) {
+	if seqgrp.GetNSeq() != len(seq_lengths) {
 		t.Fatalf("Wrote %d seqs, but read only %d.\n%s, %d",
-			len(seq_lengths), len(seq_set),
+			len(seq_lengths), seqgrp.GetNSeq(),
 			"Spaces was set to ", spaces)
 	}
 	if n_dup != 0 {
 		t.Fatalf("Found %d dups. Expected zero", n_dup)
 	}
-	for i, s := range seq_set {
+	for i, s := range seqgrp.GetSeqSlc() {
 		if s.Testsize() != seq_lengths[i] {
 			t.Fatalf("Sequence length expected %d, got %d", seq_lengths[i], s.Testsize())
 		}
@@ -100,4 +103,54 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 func TestReadSeqs(t *testing.T) {
 	innerWriteReadSeqs(t, no_spaces)
 	innerWriteReadSeqs(t, with_spaces)
+}
+
+type testStype struct {
+	s     string
+	stype SeqType
+}
+
+var stypedata = []struct {
+	s1    string
+	stype SeqType
+}{
+	{"> seq1\nac gt  \n> seq 2\nACGT-ACGT", DNA},
+	{"> seq1\naaa\n>seq 2\nACGT-ACG\nT", DNA},
+	{"> s1\n a c    \ng-U\n>s2\naaaa", RNA},
+	{"> s\nacgu\n>ss\nacgu\n\n", RNA},
+	{"> s\nACGU\n>ss\nACGT\n\n", Ntide},
+	{"> s\nacgu\n>ss\nACGT\n\n", Ntide},
+	{"> s1\nef", Protein},
+	{"> s1\nEF", Protein},
+	{"> s1\nB", Unknown},
+	{"> s1\njb\n>s2\nO", Unknown},
+}
+
+func breaker() {}
+func TestTypes(t *testing.T) {
+	s_opts := &Options{
+		Vbsty: 0, Keep_gaps: false,
+		Dry_run:  true,
+		Rmv_gaps: true,
+	}
+	for tnum, x := range stypedata {
+		f_tmp, err := ioutil.TempFile("", "_del_me_testing")
+		if err != nil {
+			t.Fatalf("tempfile %v: %s", f_tmp, err)
+		}
+		defer os.Remove (f_tmp.Name())
+		
+		if _, err := io.WriteString(f_tmp, x.s1); err != nil {
+			t.Fatalf("writing string to temp file")
+		}
+		f_tmp.Close()
+		seqgrp, _, err := Readfile(f_tmp.Name(), s_opts)
+		seqgrp.Upper()
+		st := seqgrp.GetType()
+		if st != x.stype {
+			t.Fatalf("seq num %d (from 0) got %d expected %d", tnum, st, x.stype) }
+
+		
+	}
+	
 }

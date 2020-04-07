@@ -1,7 +1,8 @@
 // 20 Dec 2017
 
-// Package seq provides functions for sequences, which usually begin their lives in fasta format. It can
-// read write and compare them.
+// Package seq provides functions for sequences,
+// which usually begin their lives in fasta format. It can
+// read and write them.
 package seq
 
 import (
@@ -16,80 +17,66 @@ import (
 	"unicode"
 )
 
+type symbol byte
+
 // Seq is the exported type.
 type Seq struct {
 	cmmt string
 	seq  []byte
 }
 
-type Seq_type byte
+// A marker to say what type of sequence we have, protein, DNA, ...
+type SeqType byte
 
-// DNA or RNA or protein ?
 const (
-	DNA Seq_type = iota
+	Unknown SeqType = iota
 	Protein
+	DNA
+	RNA
+	Ntide
 )
 
+// We only read ascii characters, so anything bigger than this is not
+// valid.
 const (
-	MaxSym = 128
+	MaxSym = 127
 )
 
 // Options contains all the choices passed in from the caller.
 type Options struct {
-	Vbsty int
-	//	Dsbl_merge bool // disable merging of sequences
+	Vbsty     int
 	Dry_run   bool // Do not write any files
 	Keep_gaps bool // Keep gaps upon reading
-	//	Min_ovlp   int  // minimimum overlap of sequences
-	Rmv_gaps bool // Remove gaps on output
+	Rmv_gaps  bool // Remove gaps on output
 }
-
-// These const types are what the compare function can return when it
-// compares two sequences.
-const (
-	No_sim = iota
-	Identical
-	Ident_remove_frst // identical if we say abcde is the same as ab--e
-	Ident_remove_scnd // remove first or second, whoever has most gaps
-	S_in_t            // first is substring of second
-	T_in_s            // second is substring of first
-	Ovlp_merged       // there is overlap and we will return a merged sequence
-)
 
 // Constants
 const gapchar byte = '-'   // a minus sign is always used for gaps
 const cmmt_char byte = '>' // and this introduces comments in fasta format
 
-// Contains reports if s contains t. That is, is t a subsequence of s.
-func (s Seq) Contains(t Seq) bool {
-	return bytes.Contains(s.seq, t.seq)
+// SeqGrp is a group of sequences, with some additional information
+// such as what type (protein, nucleotide) and the number of symbols
+// that have been used.
+type SeqGrp struct {
+	symUsed  [MaxSym]bool  // which symbols are actually used
+	mapping  [MaxSym]uint8 // mapping['C'] tells me the index used for C
+	revmap   []uint8
+	seqs     []Seq
+	stype    SeqType
+	usedKnwn bool // Do we know how many symbols are used ?
 }
 
-// cmp_with_gaps takes two sequences and says if they are identical.
-// They must have the same length, since they come from a gapped alignment.
-// We count the number of gap characters and return an indicator of who
-// had the most gaps. Presumably, this is the candidate to remove.
-func cmp_with_gaps(s, t Seq) int {
-	var n_s, n_t int
-	for i := range s.seq { //      If characters are identical
-		if s.seq[i] == t.seq[i] { // or if one of them is a gap,
-			continue //              we just keep going.
-		}
-		if s.seq[i] == gapchar {
-			n_s++
-			continue
-		}
-		if t.seq[i] == gapchar {
-			n_t++
-			continue
-		}
-		return -1
-	} // Sequences are identical in non-gaps. Decide which should go
-	if n_s > n_t {
-		return Ident_remove_frst
-	}
-	return Ident_remove_scnd
-}
+// GetNSeq returns the number of sequences
+func (seqgrp *SeqGrp) GetNSeq() int { return len(seqgrp.seqs) }
+
+// GetSeqSlc return the slice of sequences
+func (seqgrp *SeqGrp) GetSeqSlc() []Seq { return seqgrp.seqs }
+
+
+// GetMap tells us where we are storing info about a symbol in our
+// tallies. So, seq[i].GetMap() tells us where to put info about this
+// character.
+func (seqgrp *SeqGrp) GetMap(c byte) uint8 { return seqgrp.mapping[c] }
 
 // seq.Get_cmmt returns the comment from a sequence
 func (s Seq) get_cmmt() string {
@@ -98,9 +85,7 @@ func (s Seq) get_cmmt() string {
 
 // seq.get_seq returns the sequence from a sequence.
 // So far, I have not had to export this.
-func (s Seq) get_seq() []byte {
-	return s.seq
-}
+func (s Seq) get_seq() []byte { return s.seq }
 
 // Function GetSeq returns the sequence as the original byte slice
 func (s Seq) GetSeq() []byte { return s.seq }
@@ -117,8 +102,8 @@ func (s Seq) Testsize() int {
 	return len(s.seq)
 }
 
-// Set_seq will replace whatever was the sequence with a new one
-func (s *Seq) Set_seq(t []byte) {
+// SetSeq will replace whatever was the sequence with a new one
+func (s *Seq) SetSeq(t []byte) {
 	s.seq = t
 }
 
@@ -193,13 +178,13 @@ func trimStr(s string, n int) string {
 	return s
 }
 
-// SeqUpper changes a sequence to upper case, in place.
+// Upper changes a sequence to upper case, in place.
 // It only works with bytes, not runes.
 // It can return an error if it encounters a symbol it does
 // not like (value higher than 128).
 func (seq Seq) Upper() error {
 	const diff = 'a' - 'A'
-	const symerr = "bad sym \"%c\" at position %d starting %s"
+	const symerr = "bad sym \"%c\" at position %d starting \"%s\""
 	s := seq.GetSeq()
 	for i := 0; i < len(s); i++ {
 		c := s[i]
@@ -212,6 +197,13 @@ func (seq Seq) Upper() error {
 		if 'a' <= c && c <= 'z' {
 			s[i] -= diff
 		}
+	}
+	return nil
+}
+
+func (seqgrp SeqGrp) Upper() error {
+	for _, ss := range seqgrp.seqs {
+		if err := ss.Upper(); err != nil { return err }
 	}
 	return nil
 }
@@ -256,7 +248,7 @@ func (scnr *myscanner) with_nl(delim byte) (line []byte) {
 			return line
 		}
 	}
-	var a []byte                                    // The comment line has broken our parser
+	var a []byte                                    // Comment line broke our parser
 	var tmp_line []byte = make([]byte, len(line))   // Save what we have in a newly
 	copy(tmp_line, line)                            // allocated buffer
 	a, scnr.err = scnr.bufio_reader.ReadBytes('\n') // Just go to end of line
@@ -287,8 +279,8 @@ func (scnr *myscanner) readbigslice(delim byte) (line []byte) {
 		return
 	}
 
-	if scnr.err == bufio.ErrBufferFull { // Now the nasty case of having to do multiple reads
-		var r []byte
+	if scnr.err == bufio.ErrBufferFull { // Now the nasty case of
+		var r []byte //                     having to do multiple reads
 		r = append(r, line...)
 		line = r
 		var tmp []byte
@@ -362,11 +354,13 @@ func lump_split(b []byte, white []bool, scnr *myscanner) (seq Seq, err error) {
 // It should work with utf-8 files.
 // This should not be the case with sequences, but it might be the case with comments.
 // The function will stop reading if it encounters an error.
-func ReadSeqs(fname string, seq_set []Seq, seq_map map[string]int, s_opts *Options) (seq_out []Seq, n_dup int, err error) {
+func ReadSeqs(fname string, seqgrp *SeqGrp,
+	seq_map map[string]int, s_opts *Options) (n_dup int, err error) {
 	fp, err := os.Open(fname)
 	if err != nil {
 		return
 	}
+
 	defer fp.Close()
 	s := newmyscanner(fp)
 	{ // Our scanner eats '>' characters, but our
@@ -380,7 +374,8 @@ func ReadSeqs(fname string, seq_set []Seq, seq_map map[string]int, s_opts *Optio
 		}
 	}
 
-	seq_out = seq_set
+	var seq_out []Seq
+
 	white := [256]bool{cmmt_char: true, //     Set of characters we do not want
 		'\t': true, '\n': true, '\v': true, // in sequences, including the
 		'\f': true, '\r': true, ' ': true} //  comment char '>'
@@ -427,13 +422,17 @@ func ReadSeqs(fname string, seq_set []Seq, seq_map map[string]int, s_opts *Optio
 			}
 		}
 		seq_map[t] = len(seq_out) // Store the index of this sequence for future comparisons
+
 		seq_out = append(seq_out, seq)
 	}
-	s.cleanup()
+	breaker := func() { fmt.Println() }
+	breaker()
+	seqgrp.seqs = append(seqgrp.seqs, seq_out...)
+
 	return
 }
 
-// check_seq_lengths() should only be called if we are keeping
+// check_seq_lengths should only be called if we are keeping
 // gaps. Then we imagine all the sequences are aligned, so they
 // must be the same length. Just print out up to five warnings
 
@@ -456,20 +455,36 @@ func check_lengths(seq_set []Seq) {
 	}
 }
 
+// Readfile takes a filename and reads sequences from it.
+// each in turn. It returns a SeqGrp, number of duplicates and error.
+func Readfile(fname string, s_opts *Options) (seqgrp SeqGrp, n_dup int, err error) {
+	seq_map := make(map[string]int)
+	if n_dup, err = ReadSeqs(fname, &seqgrp, seq_map, s_opts); err != nil {
+		return seqgrp, n_dup, fmt.Errorf("file %s: %v", fname, err)
+	}
+
+	
+	if s_opts.Keep_gaps {
+		check_lengths(seqgrp.seqs)
+	}
+	return
+}
+
+
 // Readfiles takes a slice of filenames and reads sequences from
 // each in turn. It returns a slice of type Seq and an error.
-func Readfiles(fname []string, s_opts *Options) (seq_set []Seq, n_dup int, err error) {
+func Readfiles(fname []string, s_opts *Options) (seqgrp SeqGrp, n_dup int, err error) {
 	seq_map := make(map[string]int)
-	seq_set = make([]Seq, 0, 0)
+	//	seq_set = make([]Seq, 0, 0)
 	for _, f := range fname {
 		n_dup_onefile := 0
-		if seq_set, n_dup_onefile, err = ReadSeqs(f, seq_set[:], seq_map, s_opts); err != nil {
-			return seq_set, n_dup, fmt.Errorf("file %s: %v", f, err)
+		if n_dup_onefile, err = ReadSeqs(f, &seqgrp, seq_map, s_opts); err != nil {
+			return seqgrp, n_dup, fmt.Errorf("file %s: %v", f, err)
 		}
 		n_dup += n_dup_onefile
 	}
 	if s_opts.Keep_gaps {
-		check_lengths(seq_set)
+		check_lengths(seqgrp.seqs)
 	}
 	return
 }
@@ -539,7 +554,7 @@ func Write_to_f(outseq_fname string, seq_set []Seq, s_opts *Options) (err error)
 func (s *Seq) Copy() (t Seq) {
 	t = *new(Seq)
 	t.cmmt = s.cmmt
-	t.Set_seq(s.get_seq())
+	t.SetSeq(s.get_seq())
 	return t
 }
 
