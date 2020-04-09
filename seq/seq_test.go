@@ -76,9 +76,9 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 	}
 	defer os.Remove(f_tmp.Name())
 	s_opts := &Options{
-		Vbsty: 0, Keep_gaps: false,
-		Dry_run:  true,
-		Rmv_gaps: true}
+		Vbsty: 0, Keep_gaps_rd: false,
+		Dry_run:      true,
+		Rmv_gaps_wrt: true}
 	var names = []string{f_tmp.Name()}
 	seqgrp, n_dup, err := Readfiles(names, s_opts)
 	if err != nil {
@@ -94,7 +94,34 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 	}
 	for i, s := range seqgrp.GetSeqSlc() {
 		if s.Testsize() != seq_lengths[i] {
-			t.Fatalf("Sequence length expected %d, got %d", seq_lengths[i], s.Testsize())
+			t.Fatalf("Seq length expected %d, got %d", seq_lengths[i], s.Testsize())
+		}
+	}
+
+}
+
+func breaker() {}
+// Check that broken files are gracefully handled
+func TestEmpty(t *testing.T) {
+	bad_contents := []string{
+		"> blah\n",
+		"",
+		"rubbish",
+	}
+	for _, content := range bad_contents {
+		f_tmp, err := ioutil.TempFile("", "_del_me_testing")
+		if err != nil {
+			t.Fatalf("tempfile %v: %s", f_tmp, err)
+		}
+		defer os.Remove(f_tmp.Name())
+		if _, err := io.WriteString(f_tmp, content); err != nil {
+			t.Fatalf("writing string to temp file")
+		}
+
+		f_tmp.Close()
+		s_opts := &Options{Vbsty: 0, Keep_gaps_rd: true, Dry_run: true}
+		if _, _, err := Readfile(f_tmp.Name(), s_opts); err == nil {
+			t.Fatalf("should generate error on zero-length file")
 		}
 	}
 
@@ -126,20 +153,19 @@ var stypedata = []struct {
 	{"> s1\njb\n>s2\nO", Unknown},
 }
 
-func breaker() {}
 func TestTypes(t *testing.T) {
 	s_opts := &Options{
-		Vbsty: 0, Keep_gaps: false,
-		Dry_run:  true,
-		Rmv_gaps: true,
+		Vbsty: 0, Keep_gaps_rd: false,
+		Dry_run:      true,
+		Rmv_gaps_wrt: true,
 	}
 	for tnum, x := range stypedata {
 		f_tmp, err := ioutil.TempFile("", "_del_me_testing")
 		if err != nil {
 			t.Fatalf("tempfile %v: %s", f_tmp, err)
 		}
-		defer os.Remove (f_tmp.Name())
-		
+		defer os.Remove(f_tmp.Name())
+
 		if _, err := io.WriteString(f_tmp, x.s1); err != nil {
 			t.Fatalf("writing string to temp file")
 		}
@@ -148,9 +174,31 @@ func TestTypes(t *testing.T) {
 		seqgrp.Upper()
 		st := seqgrp.GetType()
 		if st != x.stype {
-			t.Fatalf("seq num %d (from 0) got %d expected %d", tnum, st, x.stype) }
-
-		
+			t.Fatalf("seq num %d (from 0) got %d expected %d", tnum, st, x.stype)
+		}
 	}
-	
+
+}
+
+func TestCnt(t *testing.T) {
+	testseqs := `>s1
+ACDaa
+>s2
+CCD-a
+> s3
+CCQaa`
+	s_opts := &Options{Vbsty: 0, Keep_gaps_rd: true, Dry_run: true}
+	f_tmp, err := ioutil.TempFile("", "_del_me_testing")
+	if err != nil {
+		t.Fatalf("tempfile %v: %s", f_tmp, err)
+	}
+	defer os.Remove(f_tmp.Name())
+	if _, err := io.WriteString(f_tmp, testseqs); err != nil {
+		t.Fatalf("writing string to temp file")
+	}
+	f_tmp.Close()
+
+	seqgrp, _, err := Readfile(f_tmp.Name(), s_opts)
+	seqgrp.Upper()
+	seqgrp.UsageFrac(false)
 }
