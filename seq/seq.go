@@ -15,6 +15,8 @@ import (
 	"os"
 	"strings"
 	"unicode"
+
+	"github.com/andrew-torda/matrix"
 )
 
 type symbol byte
@@ -39,15 +41,15 @@ const (
 // We only read ascii characters, so anything bigger than this is not
 // valid.
 const (
-	MaxSym = 127
+	MaxSym uint8 = 127
 )
 
 // Options contains all the choices passed in from the caller.
 type Options struct {
-	Vbsty     int
-	Dry_run   bool // Do not write any files
-	Keep_gaps bool // Keep gaps upon reading
-	Rmv_gaps  bool // Remove gaps on output
+	Vbsty        int
+	Dry_run      bool // Do not write any files
+	Keep_gaps_rd bool // Keep gaps upon reading
+	Rmv_gaps_wrt bool // Remove gaps on output
 }
 
 // Constants
@@ -62,6 +64,8 @@ type SeqGrp struct {
 	mapping  [MaxSym]uint8 // mapping['C'] tells me the index used for C
 	revmap   []uint8
 	seqs     []Seq
+	counts   matrix.FMatrix2d
+	gapcnt   []int32 // count of gaps at each position
 	stype    SeqType
 	usedKnwn bool // Do we know how many symbols are used ?
 }
@@ -71,7 +75,6 @@ func (seqgrp *SeqGrp) GetNSeq() int { return len(seqgrp.seqs) }
 
 // GetSeqSlc return the slice of sequences
 func (seqgrp *SeqGrp) GetSeqSlc() []Seq { return seqgrp.seqs }
-
 
 // GetMap tells us where we are storing info about a symbol in our
 // tallies. So, seq[i].GetMap() tells us where to put info about this
@@ -203,7 +206,9 @@ func (seq Seq) Upper() error {
 
 func (seqgrp SeqGrp) Upper() error {
 	for _, ss := range seqgrp.seqs {
-		if err := ss.Upper(); err != nil { return err }
+		if err := ss.Upper(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -345,15 +350,19 @@ func lump_split(b []byte, white []bool, scnr *myscanner) (seq Seq, err error) {
 			i++
 		}
 	}
+	if len(seq.seq) < 1 {
+		err = fmt.Errorf("zero length sequence, starting %s", seq.cmmt)
+	}
 	return
 }
+func breaker() {}
 
-// seq.ReadSeqs takes a filename as input and reads sequences in fasta
-// format.
-// It returns ndone and error.. The number of sequences read up and an error.
-// It should work with utf-8 files.
-// This should not be the case with sequences, but it might be the case with comments.
+// ReadSeqs takes a filename as input and reads sequences in fasta
+// format.  It returns n_duplicates and error. It should work with
+// utf-8 files.  This should not
+// be the case with sequences, but it might be the case with comments.
 // The function will stop reading if it encounters an error.
+
 func ReadSeqs(fname string, seqgrp *SeqGrp,
 	seq_map map[string]int, s_opts *Options) (n_dup int, err error) {
 	fp, err := os.Open(fname)
@@ -363,12 +372,12 @@ func ReadSeqs(fname string, seqgrp *SeqGrp,
 
 	defer fp.Close()
 	s := newmyscanner(fp)
-	{ // Our scanner eats '>' characters, but our
+	{ //                 Our scanner eats '>' characters, but our
 		var btmp byte // first line has not been through scanner,
 		if btmp, err = s.bufio_reader.ReadByte(); err != nil {
 			return //    so we jump over first character.
 		}
-		if btmp != cmmt_char { // Since we are here, we can check the file format
+		if btmp != cmmt_char { // might as well check the file format
 			err = fmt.Errorf("First byte in file was not a comment character")
 			return
 		}
@@ -380,8 +389,8 @@ func ReadSeqs(fname string, seqgrp *SeqGrp,
 		'\t': true, '\n': true, '\v': true, // in sequences, including the
 		'\f': true, '\r': true, ' ': true} //  comment char '>'
 
-	if !s_opts.Keep_gaps { //      Unless we want to keep gaps, we also
-		white[gapchar] = true //   remove "-" characters. Treat them as white space
+	if !s_opts.Keep_gaps_rd { // Unless we want to keep gaps, we also remove
+		white[gapchar] = true // "-" characters. Treat them as white space
 	}
 
 	const dup_warn = "Sequence starting \"%s\" was duplicated in file %s\n"
@@ -390,14 +399,16 @@ func ReadSeqs(fname string, seqgrp *SeqGrp,
 
 	for s.get_next_lump() {
 		nc++
-		const h_len = 40 // We hash on the first 40 characters of a sequence comment
+		const h_len = 40 // Hash on the first 40 char of a sequence comment
 		var seq Seq
 		if s.err != nil {
 			err = fmt.Errorf("reading from file %s: %v, seq num: %d", fname, s.err, nc)
 			return
 		}
+		breaker()
 		if seq, err = lump_split(s.b, white[:], s); err != nil {
-			err = fmt.Errorf("splitting sequence error: %v\nWorking on seq num: %d, %s", err, nc, s.b)
+			err = fmt.Errorf("splitting seq error: %v\nSeq num: %d, %s",
+				err, nc, s.b)
 			return
 		}
 		var mini int
@@ -421,12 +432,10 @@ func ReadSeqs(fname string, seqgrp *SeqGrp,
 				}
 			}
 		}
-		seq_map[t] = len(seq_out) // Store the index of this sequence for future comparisons
+		seq_map[t] = len(seq_out) // Index of sequence for future comparisons
 
 		seq_out = append(seq_out, seq)
 	}
-	breaker := func() { fmt.Println() }
-	breaker()
 	seqgrp.seqs = append(seqgrp.seqs, seq_out...)
 
 	return
@@ -463,13 +472,11 @@ func Readfile(fname string, s_opts *Options) (seqgrp SeqGrp, n_dup int, err erro
 		return seqgrp, n_dup, fmt.Errorf("file %s: %v", fname, err)
 	}
 
-	
-	if s_opts.Keep_gaps {
+	if s_opts.Keep_gaps_rd {
 		check_lengths(seqgrp.seqs)
 	}
 	return
 }
-
 
 // Readfiles takes a slice of filenames and reads sequences from
 // each in turn. It returns a slice of type Seq and an error.
@@ -483,7 +490,7 @@ func Readfiles(fname []string, s_opts *Options) (seqgrp SeqGrp, n_dup int, err e
 		}
 		n_dup += n_dup_onefile
 	}
-	if s_opts.Keep_gaps {
+	if s_opts.Keep_gaps_rd {
 		check_lengths(seqgrp.seqs)
 	}
 	return
@@ -522,7 +529,7 @@ func Write_to_f(outseq_fname string, seq_set []Seq, s_opts *Options) (err error)
 		fmt.Fprintf(outfile_fp, "%c%s\n", cmmt_char, seq.get_cmmt())
 
 		s := seq.get_seq()
-		if s_opts.Rmv_gaps { // we have to remove gap characters on output
+		if s_opts.Rmv_gaps_wrt { // we have to remove gap characters on output
 			n := 0
 			for i := range s { //    So we start by looking how many non-gap
 				if s[i] != gapchar { //  characters there are.
@@ -565,20 +572,4 @@ func (s Seq) String() (t string) {
 	}
 	t += string(s.get_seq())
 	return
-}
-
-// CharUsed says how many characters a sequence has used. The idea is that
-// one can make a guess if we have a dna or protein sequence
-func (s *Seq) CharUsed() (n int) {
-	var used [256]bool
-	for _, c := range s.get_seq() {
-		used[c] = true
-	}
-
-	for _, t := range used {
-		if t == true {
-			n++
-		}
-	}
-	return n
 }
