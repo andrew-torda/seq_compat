@@ -569,6 +569,8 @@ func (s *Seq) Copy() (t Seq) {
 func (s Seq) String() (t string) {
 	if len(s.cmmt) > 0 {
 		t = fmt.Sprintf("%c%s\n", cmmt_char, s.get_cmmt())
+	} else {
+		t = ">"
 	}
 	t += string(s.get_seq())
 	return
