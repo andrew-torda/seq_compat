@@ -68,7 +68,11 @@ func (seqgrp *SeqGrp) GetType() SeqType {
 func (seqgrp *SeqGrp) mapsyms() error {
 	if seqgrp.usedKnwn != true {
 		seqgrp.SetSymUsed()
+	}	
+	for i := range seqgrp.mapping { // Initialise with bad value, to
+		seqgrp.mapping [i] = math.MaxUint8 // trap errors later
 	}
+
 	var n uint8
 	for i := range seqgrp.symUsed {
 		if seqgrp.symUsed[i] {
@@ -93,7 +97,7 @@ func (seqgrp *SeqGrp) UsageSite() {
 	nrow := len(seqgrp.revmap)
 	ncol := len(seqgrp.seqs[0].GetSeq())
 	seqgrp.counts = matrix.NewFMatrix2d(nrow, ncol)
-	for _, ss := range seqgrp.seqs {
+	for _, ss := range seqgrp.seqs { // Breaking here
 		for i, c := range ss.GetSeq() {
 			cmap := seqgrp.mapping[c]
 			seqgrp.counts.Mat[cmap][i] += 1
@@ -112,34 +116,114 @@ func (seqgrp *SeqGrp) UsageFrac(gapsAreChar bool) {
 	}
 	counts := seqgrp.counts
 	gappos := seqgrp.mapping[gapchar]
-	for ipos, pos := range counts.Mat {
-		var total float32
-		for stype := range pos { // symbol type
-			total += counts.Mat[ipos][stype]
-		}
-		if gapsAreChar == false {
-			ngap := counts.Mat[ipos][gappos]
-			total -= ngap
-		}
-		for stype := range pos {
-			if total != 0 {
-				counts.Mat[ipos][stype] /= total
-			}
+
+	nrow, ncol := counts.Size()
+	total := make ([]float32, ncol) // total observations in each column
+	for icol := 0; icol < ncol; icol++ {
+		for irow := 0; irow < nrow; irow++ {
+			total[icol] += counts.Mat[irow][icol]
 		}
 	}
+	if gapsAreChar == false { // If necessary, remove gaps from the total
+		for icol := 0; icol < ncol; icol++ { // Should benchmark and see
+			if counts.Mat[gappos][icol] != 0.0 {  // if this if statement
+				total[icol] -= counts.Mat[gappos][icol] // saves time.
+			}
+		}	
+	}
+	for icol := 0; icol < ncol; icol++ { // Normalise the counts
+		for irow := 0; irow < nrow; irow++ {
+			counts.Mat[irow][icol] /= (total[icol])
+		}
+	}	
+	seqgrp.freqKnwn = true
 }
 
 // PrintFreqs prints out the frequencies of each character type
-// It is probably only useful for debugging.
-func (seqgrp *SeqGrp) PrintFreqs() {
+// It is probably only useful for debugging or testing.
+// fmt is a format string like "%6.1f"
+func (seqgrp *SeqGrp) PrintFreqs(format string) {
 	if len(seqgrp.revmap) == 0 {
 		seqgrp.UsageSite()
 	}
 	for ic, m := range seqgrp.revmap {
-		fmt.Printf ("%c ", m)
+		fmt.Printf("%c ", m)
 		for i := 0; i < len(seqgrp.seqs[0].seq); i++ {
-			fmt.Printf("%6.1f", seqgrp.counts.Mat[ic][i])
+			fmt.Printf(format, seqgrp.counts.Mat[ic][i])
 		}
-		fmt.Printf ("\n")
+		fmt.Printf("\n")
 	}
+}
+
+// Entropy calculates sequence entropy. It returns the result as a slice
+// of the same length as the sequences. It needs to be told if gaps are
+// characters, or should be ignored.
+// If the sequence is a nucleotide or protein, we know what logarithm to use.
+// If the sequence is unknown, we use the log base the number different
+// symbols
+func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
+	if !seqgrp.freqKnwn {
+		seqgrp.UsageFrac(gapsAreChar)
+	}
+	var nSym float64
+	const progbug = "program bug in Entropy"
+
+	if gapsAreChar {
+		switch seqgrp.GetType() {
+		case DNA, RNA, Ntide:
+			nSym = 5 // 4 nucleotides + gap character
+		case Protein:
+			nSym = 21 // 20 residues, + gap
+		case Unknown:
+			nSym = float64(len(seqgrp.revmap))
+		default:
+			return nil, fmt.Errorf(progbug)
+		}
+	} else { // gaps are ignored
+		switch seqgrp.GetType() {
+			case DNA, RNA, Ntide:
+			nSym = 4
+		case Protein:
+			nSym = 20
+		case Unknown:
+			nSym = float64(len(seqgrp.revmap))
+		default:
+			return nil, fmt.Errorf(progbug)
+		}
+	}
+	logfac := 1.0 / math.Log(nSym)
+	entropy := make([]float32, len(seqgrp.seqs[0].GetSeq()))
+	nrow, ncol := seqgrp.counts.Size()
+	if gapsAreChar {
+		for icol := 0; icol < ncol; icol++ {
+			total := 0.0
+			for irow := 0; irow < nrow; irow++ {
+				f := float64(seqgrp.counts.Mat[irow][icol])
+				if f == 0.0 {
+					continue
+				}
+				logf := math.Log(f) * logfac
+				total += f * logf
+			}
+			entropy[icol] = float32(math.Abs(total))
+		}
+	} else { // we have to check and ignore gap characters
+		iBadRow := int(seqgrp.mapping['-'])
+		fmt.Println ("badrow is ", iBadRow)
+		for icol := 0; icol < ncol; icol++ {
+			total := 0.0
+			for irow := 0; irow < nrow; irow++ {
+				if irow == iBadRow { continue }
+				f := float64(seqgrp.counts.Mat[irow][icol])
+				if f == 0.0 {
+					continue
+				}
+				logf := math.Log(f) * logfac
+				total += f * logf
+			}
+			entropy[icol] = float32(math.Abs(total))
+		}
+
+	}
+	return entropy, nil
 }
