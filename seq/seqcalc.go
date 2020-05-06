@@ -96,6 +96,8 @@ func (seqgrp *SeqGrp) mapsyms() error {
 // counts.Mat looks like [length_of_seq][number_of_types]
 // We store it as a float32, since it will later usually be normalised
 // and converted to a fraction.
+// Inaccuracy introduced by working with floats is no problem and we
+// can avoid allocating a new matrix for the frequencies.
 func (seqgrp *SeqGrp) UsageSite() {
 	if len(seqgrp.revmap) == 0 {
 		seqgrp.mapsyms()
@@ -116,13 +118,18 @@ func (seqgrp *SeqGrp) UsageSite() {
 // 2 to 2/5 = 0.4
 // If gapsAreChar is true, gaps ("-") are treated as a valid character
 // type. Otherwise they are removed from the tallies.
+// If gapsAreChar is not true, then
+//    a symbol's fraction is the fraction of non-gaps in which you find this symbol
+//    the gap's fraction is the fraction of the total number of residues in which one finds a gap.
+// This means that the fractions of non-gaps adds up to 1, and then you have a bit more due to gaps.
+// It also means that the data looks correct when you plot it out.
 func (seqgrp *SeqGrp) UsageFrac(gapsAreChar bool) {
 	if seqgrp.counts == nil {
 		seqgrp.UsageSite()
 	}
 	counts := seqgrp.counts
 	gappos := seqgrp.mapping[GapChar]
-    thereAreGaps := true
+	thereAreGaps := true
 	if gappos == badMap {
 		thereAreGaps = false
 	}
@@ -133,19 +140,29 @@ func (seqgrp *SeqGrp) UsageFrac(gapsAreChar bool) {
 			total[icol] += counts.Mat[irow][icol]
 		}
 	}
+	var savedGapFrac []float32
 	if thereAreGaps {
-		if gapsAreChar == false { // If necessary, remove gaps from the total
-			for icol := 0; icol < ncol; icol++ { // Should benchmark and see
-				if counts.Mat[gappos][icol] != 0.0 { // if this if statement
-					total[icol] -= counts.Mat[gappos][icol] // saves time.
-				}
+		if gapsAreChar == false {
+			savedGapFrac = make([]float32, ncol)
+			for icol := range savedGapFrac {
+				savedGapFrac[icol] = counts.Mat[gappos][icol] / total[icol]
+			}
+			for icol := 0; icol < ncol; icol++ { // Remove gaps from the totals
+				total[icol] -= counts.Mat[gappos][icol]
 			}
 		}
 	}
 	for icol := 0; icol < ncol; icol++ { // Normalise the counts
 		for irow := 0; irow < nrow; irow++ {
-			counts.Mat[irow][icol] /= (total[icol])
+			if total[icol] != 0 {
+				counts.Mat[irow][icol] /= (total[icol])
+			}
 		}
+	}
+	// The gaps have to be corrected. They have to be a fraction of the
+	// original column totals
+	for icol := range savedGapFrac {
+		counts.Mat[gappos][icol] = savedGapFrac[icol]
 	}
 	seqgrp.freqKnwn = true
 }
@@ -261,10 +278,14 @@ func (seqgrp *SeqGrp) Compat(refseq []byte, gapsAreChar bool) []float32 {
 			continue
 		}
 		nseq := (1 - gapfrac[i]) * float32(ntotal)
-		fracC := seqgrp.counts.Mat[ic][i]
-		nthischar := fracC*nseq - 1
-		f := nthischar / (nseq - 1)
-		compat[i] = f
+		if nseq < 1.001 { // It means, we have a lonely insertion
+			compat[i] = 0
+		} else {
+			fracC := seqgrp.counts.Mat[ic][i]
+			nthischar := fracC*nseq - 1
+			f := nthischar / (nseq - 1)
+			compat[i] = f
+		}
 	}
 	return compat
 }
