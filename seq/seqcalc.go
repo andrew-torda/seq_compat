@@ -7,9 +7,13 @@ package seq
 
 import (
 	"fmt"
-	"math"
-
+	. "github.com/andrew-torda/goutil/seq/common"
 	"github.com/andrew-torda/matrix"
+	"math"
+)
+
+const (
+	badMap = math.MaxUint8 // marks a symbol as not seen
 )
 
 // SetSymUsed fills out the bool slice which says whether or not a
@@ -68,16 +72,16 @@ func (seqgrp *SeqGrp) GetType() SeqType {
 func (seqgrp *SeqGrp) mapsyms() error {
 	if seqgrp.usedKnwn != true {
 		seqgrp.SetSymUsed()
-	}	
+	}
 	for i := range seqgrp.mapping { // Initialise with bad value, to
-		seqgrp.mapping [i] = math.MaxUint8 // trap errors later
+		seqgrp.mapping[i] = badMap // trap errors later
 	}
 
 	var n uint8
 	for i := range seqgrp.symUsed {
 		if seqgrp.symUsed[i] {
 			seqgrp.mapping[i] = n
-			if n >= math.MaxUint8 {
+			if n >= badMap {
 				panic("program bug")
 			}
 			seqgrp.revmap = append(seqgrp.revmap, uint8(i))
@@ -88,8 +92,10 @@ func (seqgrp *SeqGrp) mapsyms() error {
 }
 
 // Usage by site counts how many of each symbol/character appear at
-// each site in the alignment
+// each site in the alignment.
 // counts.Mat looks like [length_of_seq][number_of_types]
+// We store it as a float32, since it will later usually be normalised
+// and converted to a fraction.
 func (seqgrp *SeqGrp) UsageSite() {
 	if len(seqgrp.revmap) == 0 {
 		seqgrp.mapsyms()
@@ -97,7 +103,7 @@ func (seqgrp *SeqGrp) UsageSite() {
 	nrow := len(seqgrp.revmap)
 	ncol := len(seqgrp.seqs[0].GetSeq())
 	seqgrp.counts = matrix.NewFMatrix2d(nrow, ncol)
-	for _, ss := range seqgrp.seqs { // Breaking here
+	for _, ss := range seqgrp.seqs {
 		for i, c := range ss.GetSeq() {
 			cmap := seqgrp.mapping[c]
 			seqgrp.counts.Mat[cmap][i] += 1
@@ -106,7 +112,7 @@ func (seqgrp *SeqGrp) UsageSite() {
 }
 
 // Usage Frac converts count to normalised frequencies. If letter 'A'
-// occurs 2 times in five positions, its count entry will be change from
+// occurs 2 times in five positions, its count entry will be changed from
 // 2 to 2/5 = 0.4
 // If gapsAreChar is true, gaps ("-") are treated as a valid character
 // type. Otherwise they are removed from the tallies.
@@ -115,44 +121,48 @@ func (seqgrp *SeqGrp) UsageFrac(gapsAreChar bool) {
 		seqgrp.UsageSite()
 	}
 	counts := seqgrp.counts
-	gappos := seqgrp.mapping[gapchar]
-
+	gappos := seqgrp.mapping[GapChar]
+    thereAreGaps := true
+	if gappos == badMap {
+		thereAreGaps = false
+	}
 	nrow, ncol := counts.Size()
-	total := make ([]float32, ncol) // total observations in each column
+	total := make([]float32, ncol) // total observations in each column
 	for icol := 0; icol < ncol; icol++ {
 		for irow := 0; irow < nrow; irow++ {
 			total[icol] += counts.Mat[irow][icol]
 		}
 	}
-	if gapsAreChar == false { // If necessary, remove gaps from the total
-		for icol := 0; icol < ncol; icol++ { // Should benchmark and see
-			if counts.Mat[gappos][icol] != 0.0 {  // if this if statement
-				total[icol] -= counts.Mat[gappos][icol] // saves time.
+	if thereAreGaps {
+		if gapsAreChar == false { // If necessary, remove gaps from the total
+			for icol := 0; icol < ncol; icol++ { // Should benchmark and see
+				if counts.Mat[gappos][icol] != 0.0 { // if this if statement
+					total[icol] -= counts.Mat[gappos][icol] // saves time.
+				}
 			}
-		}	
+		}
 	}
 	for icol := 0; icol < ncol; icol++ { // Normalise the counts
 		for irow := 0; irow < nrow; irow++ {
 			counts.Mat[irow][icol] /= (total[icol])
 		}
-	}	
+	}
 	seqgrp.freqKnwn = true
 }
 
-// PrintFreqs prints out the frequencies of each character type
-// It is probably only useful for debugging or testing.
-// fmt is a format string like "%6.1f"
-func (seqgrp *SeqGrp) PrintFreqs(format string) {
-	if len(seqgrp.revmap) == 0 {
-		seqgrp.UsageSite()
+// GapFrac looks in a SeqGrp and returns a slice with the fraction
+// of gap characters at each position. If there are no gaps, there
+// is no slice so we quietly return nil without signalling an error.
+func (seqgrp *SeqGrp) GapFrac() []float32 {
+	if !seqgrp.freqKnwn {
+		gapsAreChar := true // Does not matter what we say here
+		seqgrp.UsageFrac(gapsAreChar)
 	}
-	for ic, m := range seqgrp.revmap {
-		fmt.Printf("%c ", m)
-		for i := 0; i < len(seqgrp.seqs[0].seq); i++ {
-			fmt.Printf(format, seqgrp.counts.Mat[ic][i])
-		}
-		fmt.Printf("\n")
+	gappos := seqgrp.mapping[GapChar]
+	if gappos == badMap {
+		return nil
 	}
+	return seqgrp.counts.Mat[gappos]
 }
 
 // Entropy calculates sequence entropy. It returns the result as a slice
@@ -181,7 +191,7 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 		}
 	} else { // gaps are ignored
 		switch seqgrp.GetType() {
-			case DNA, RNA, Ntide:
+		case DNA, RNA, Ntide:
 			nSym = 4
 		case Protein:
 			nSym = 20
@@ -209,11 +219,12 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 		}
 	} else { // we have to check and ignore gap characters
 		iBadRow := int(seqgrp.mapping['-'])
-		fmt.Println ("badrow is ", iBadRow)
 		for icol := 0; icol < ncol; icol++ {
 			total := 0.0
 			for irow := 0; irow < nrow; irow++ {
-				if irow == iBadRow { continue }
+				if irow == iBadRow {
+					continue
+				}
 				f := float64(seqgrp.counts.Mat[irow][icol])
 				if f == 0.0 {
 					continue
@@ -226,4 +237,34 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 
 	}
 	return entropy, nil
+}
+
+// Compat takes one sequence (a reference). It returns the frequency of each
+// character from this sequence at each position in the alignment.
+// Do you want to remove the reference sequence from the calculations ?
+// Usually yes.
+func (seqgrp *SeqGrp) Compat(refseq []byte, gapsAreChar bool) []float32 {
+	if !seqgrp.freqKnwn { // Make sure symbol frequencies have been calculated
+		seqgrp.UsageFrac(gapsAreChar)
+	}
+	compat := make([]float32, len(seqgrp.seqs[0].GetSeq()))
+	ntotal := seqgrp.GetNSeq()
+	gapfrac := seqgrp.GapFrac()
+	if gapfrac == nil {
+		gapfrac = make([]float32, len(seqgrp.seqs[0].GetSeq()))
+	}
+
+	for i, c := range refseq {
+		ic := seqgrp.GetMap(c)
+		if c == GapChar {
+			compat[i] = 0
+			continue
+		}
+		nseq := (1 - gapfrac[i]) * float32(ntotal)
+		fracC := seqgrp.counts.Mat[ic][i]
+		nthischar := fracC*nseq - 1
+		f := nthischar / (nseq - 1)
+		compat[i] = f
+	}
+	return compat
 }
