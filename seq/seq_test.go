@@ -181,7 +181,7 @@ func TestTypes(t *testing.T) {
 
 // roughEql says if two numbers are roughly the same
 func roughEql(a, b float32) bool {
-	const eps float32 = 0.000001
+	const eps float32 = 0.01
 	d := a - b
 	if d < 0 {
 		d = -d
@@ -325,5 +325,60 @@ DEF`
 	}
 	if n := seqgrp.FindNdx("in seq2"); n != 2 {
 		t.Fatal("Failed lookin in seq2")
+	}
+}
+
+	// 1, 1/2, 0
+var ufset1 string = `> reference sequence
+ABC
+>   some stuff here for seq1
+ABD
+> more here in seq2
+AFE`
+
+	// now 0, 0, 1, 1, 1, 1, 0
+var ufset2 = `> reference sequence
+X-BAA A-JKL
+> s2
+-DBAA --QKL
+> s3
+-GBA- --QQL
+> s4
+-JB-- --QQM`
+
+func TestCompat(t *testing.T) {
+	var expected = []struct {
+		s string
+		v []float32
+	}{
+		{ufset2, []float32{0, 0, 1, 1, 1, 0, 0, 0, 0.333, 0.667}},
+		{ufset1, []float32{1, 0.5, 0}},
+	}
+	s_opts := &Options{
+		Vbsty: 0, Keep_gaps_rd: true,
+		Dry_run:      true,
+		Rmv_gaps_wrt: false}
+	var tmpname string
+	var err error
+	var seqgrp SeqGrp
+	for i, exp := range expected {
+		if tmpname, err = wrtTmp(exp.s); err != nil {
+			t.Fatal("tempfile error:", err)
+		}
+		defer os.Remove(tmpname)
+		if seqgrp, _, err = Readfile(tmpname, s_opts); err != nil {
+			t.Fatalf("Reading temp sequences %v", err)
+		}
+		var n int
+		if n = seqgrp.FindNdx("reference"); n != 0 {
+			t.Fatalf("substring fail looking for %s, expected 1, got %d", "reference", n)
+		}
+
+		slc := seqgrp.GetSeqSlc()
+		sq := slc[n].GetSeq()
+		compat := seqgrp.Compat(sq, false)
+		if !sliceEql(compat, exp.v) {
+			t.Fatal("Set", i, "expected", exp.v, "got", compat)
+		}
 	}
 }
