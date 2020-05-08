@@ -1,0 +1,101 @@
+// 27 april 2020
+package entropy
+
+import (
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/andrew-torda/goutil/seq"
+)
+
+type ntrpyargs struct {
+	entropy []float32 // sequence entropy
+	gapfrac []float32 // fraction of gap entries in column
+	compat  []float32 // compatibility of reference sequence
+	outfile string    // write to a file or standard input
+	refseq  []byte    // nil or reference sequence
+	offset  int       // residue number offset on output
+}
+
+// writeNtrpy write a simple entropy file.
+func writeNtrpy(args *ntrpyargs) error {
+	headings1 := `"res num","entropy","%frac non-gap"`
+	if args.refseq != nil {
+		headings1 += `,"res name","compatibility"`
+	}
+	if _, err := os.Stat(args.outfile); err == nil {
+		fmt.Fprintln(os.Stderr, "Warning, trashing old version of", args.outfile)
+	}
+	var fp io.WriteCloser
+	var err error
+	if args.outfile != "" {
+		if fp, err = os.Create(args.outfile); err != nil {
+			return fmt.Errorf("output file %v: %w", args.outfile, err)
+		}
+		defer fp.Close()
+	} else {
+		fp = os.Stdout
+	}
+	// set up the gaps.
+	if args.gapfrac == nil {  // Could be that there are no gaps.
+		args.gapfrac = make([]float32, len (args.entropy))
+		for i, _ := range args.entropy { // To avoid if statements below
+			args.gapfrac[i] = 0 // make an array and just fill it with zeroes.
+		}
+	}
+	fmt.Fprintln (fp, headings1)
+	for i, v := range args.entropy {
+		fmt.Fprintf(fp, "%d,%.2f,%.2f", i+1+args.offset, v, 1-args.gapfrac[i])
+		if args.refseq != nil {
+			fmt.Fprintf(fp, ",%c,%.2f", args.refseq[i], args.compat[i])
+		}
+		fmt.Fprintln(fp)
+	}
+	return nil
+}
+
+type CmdFlag struct {
+	Offset      int    // Add this to the residue numbering on output
+	GapsAreChar bool   // Do we keep gaps ? Are gaps a valid symbol ?
+	NSym        int    // Set the number of symbols in sequences
+	RefSeq      string // A reference string, whose compatibility will be calculated
+}
+
+// Mymain is the main function for calculating entropy and writing to a file
+func Mymain(flags *CmdFlag, infile, outfile string) error {
+	var err error
+	s_opts := &seq.Options{
+		Vbsty: 0, Keep_gaps_rd: true,
+		Dry_run:      true,
+		Rmv_gaps_wrt: true,
+	}
+
+	var ntrpyargs = &ntrpyargs{ // start setting up things to go
+		outfile: outfile,       // to the printing function later
+		offset:  flags.Offset}
+
+	seqgrp, _, err := seq.Readfile(infile, s_opts)
+	if err != nil {
+		return (fmt.Errorf("Fail reading sequences: %w", err))
+	}
+
+	if flags.RefSeq != "" {
+		if ndxSeq := seqgrp.FindNdx(flags.RefSeq); ndxSeq == -1 {
+			return (fmt.Errorf("Fail finding reference sequence \"%s\"\n", flags.RefSeq))
+		} else {
+			ntrpyargs.refseq = seqgrp.GetSeqSlc()[ndxSeq].GetSeq()
+			ntrpyargs.compat = seqgrp.Compat(ntrpyargs.refseq, flags.GapsAreChar)
+		}
+	}
+	seqgrp.Upper()
+	ntrpyargs.gapfrac = seqgrp.GapFrac()
+	if ntrpyargs.entropy, err = seqgrp.Entropy(flags.GapsAreChar); err != nil {
+		return err
+	}
+	
+	if err = writeNtrpy(ntrpyargs); err != nil {
+		return err
+	}
+	return nil
+}
