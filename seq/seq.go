@@ -62,13 +62,21 @@ const cmmt_char byte = '>' // and this introduces comments in fasta format
 type SeqGrp struct {
 	symUsed  [MaxSym]bool  // which symbols are actually used
 	mapping  [MaxSym]uint8 // mapping['C'] tells me the index used for C
-	revmap   []uint8
+	revmap   []uint8       // revmap[2] tells me the character in place 2
 	seqs     []seq
 	counts   *matrix.FMatrix2d
 	gapcnt   []int32 // count of gaps at each position
 	stype    SeqType
 	usedKnwn bool // Do we know how many symbols are used ?
 	freqKnwn bool // Have we converted counts of symbols to fractional probabilities ?
+}
+
+// GetCounts gives us the normally non-exported counts
+func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d{ return seqgrp.counts }
+
+// GetSymUsed returns the normally non-exported symUsed
+func (seqgrp *SeqGrp) GetSymUsed ()[MaxSym]bool {
+	return seqgrp.symUsed
 }
 
 // Clear gets rid of any calculated quantities. Useful for testing, but
