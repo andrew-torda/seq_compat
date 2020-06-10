@@ -22,7 +22,7 @@ import (
 
 type symbol byte
 
-// Seq is the exported type.
+// seq is the exported type.
 type seq struct {
 	cmmt string
 	seq  []byte
@@ -71,12 +71,35 @@ type SeqGrp struct {
 	freqKnwn bool // Have we converted counts of symbols to fractional probabilities ?
 }
 
+// Str2SeqGrp takes some strings and returns them as a seqgrp.
+// sIn is a slice of strings which are the sequences.
+// prefix is an optional argument. Sequences need names/comments. If
+// prefix is not given, sequences will be called "> s1", "> s2", ...
+func Str2SeqGrp(sIn []string, prefix ...string) (seqgrp SeqGrp) {
+	var base string
+	if prefix == nil {
+		base = "s"
+	} else {
+		base = prefix[0]
+	}
+	for i, s := range sIn {
+		f := seq{cmmt: fmt.Sprint(">", base, i), seq: []byte(s)}
+		seqgrp.seqs = append(seqgrp.seqs, f)
+	}
+	return seqgrp
+}
+
 // GetCounts gives us the normally non-exported counts
-func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d{ return seqgrp.counts }
+func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d { return seqgrp.counts }
 
 // GetSymUsed returns the normally non-exported symUsed
-func (seqgrp *SeqGrp) GetSymUsed ()[MaxSym]bool {
+func (seqgrp *SeqGrp) GetSymUsed() [MaxSym]bool {
 	return seqgrp.symUsed
+}
+
+// GetRevmap returns the non-exported revmap
+func (seqgrp *SeqGrp) GetRevmap() []uint8 {
+	return seqgrp.revmap
 }
 
 // Clear gets rid of any calculated quantities. Useful for testing, but
@@ -96,6 +119,19 @@ func (seqgrp *SeqGrp) Clear() {
 
 // GetNSeq returns the number of sequences
 func (seqgrp *SeqGrp) GetNSeq() int { return len(seqgrp.seqs) }
+
+// GetNSym returns the number of symbols used in a seqgrp.
+// Used in testing.
+func (seqgrp *SeqGrp) GetNSym() int {
+	if !seqgrp.usedKnwn {
+		seqgrp.UsageSite()
+	}
+	if len(seqgrp.revmap) == 0 {
+		seqgrp.mapsyms()
+	}
+
+	return len(seqgrp.revmap)
+}
 
 // GetSeqSlc return the slice of sequences
 func (seqgrp *SeqGrp) GetSeqSlc() []seq { return seqgrp.seqs }
