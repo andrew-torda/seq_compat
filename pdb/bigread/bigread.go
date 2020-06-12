@@ -4,12 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"github.com/andrew-torda/goutil/pdb"
-	"github.com/andrew-torda/goutil/pdb/cmmn"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
 	"sync"
+
+	"github.com/andrew-torda/goutil/pdb"
+	"github.com/andrew-torda/goutil/pdb/cmmn"
 )
 
 const parentPath = "/work/public/no_backup/pdb/data/structures/divided/mmCIF/"
@@ -37,7 +38,6 @@ func readpdb(fullpath string) (int, error) {
 	defer fp.Close()
 	if p, err := pdb.ReadCoord(fullpath, cmmn.FileSrc, "testoutput"); err != nil {
 		return 0, err
-		breakerp(p)
 	} else {
 		breakerp(p)
 	}
