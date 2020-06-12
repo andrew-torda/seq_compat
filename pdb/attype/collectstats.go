@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"../cmmn"
-	"github.com/andrew-torda/goutil/pdb/mmcif"
-	"github.com/andrew-torda/goutil/pdb/zwrap"
 	"sort"
 	"sync"
+
+	"github.com/andrew-torda/goutil/pdb/cmmn"
+	"github.com/andrew-torda/goutil/pdb/mmcif"
+	"github.com/andrew-torda/goutil/pdb/zwrap"
 )
 
 // Read a filename from a channel, read from it and send results on the
@@ -133,7 +134,8 @@ func printstats(nummap nummap, fname string) error {
 	})
 	fmt.Fprintln(fp, "\"name\",\"n\"")
 	for _, p := range pairs {
-		if fp == nil {}
+		if fp == nil {
+		}
 		fmt.Fprintf(fp, "\"%v\",%v\n", p.name, p.n)
 	}
 	return nil
