@@ -8,7 +8,7 @@
 package submat
 
 import (
-	"github.com/andrew-torda/goutil/matrix"
+	"github.com/andrew-torda/matrix"
 	"bufio"
 	"bytes"
 	"errors"
