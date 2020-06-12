@@ -110,8 +110,8 @@ func printstats(nummap nummap, fname string) error {
 	if fname != "" {
 		if fp, err = os.Create(fname); err != nil {
 			return errorName(fname, err)
-			defer fp.Close()
 		}
+		defer fp.Close()
 	} else {
 		fp = os.Stdout
 	}
