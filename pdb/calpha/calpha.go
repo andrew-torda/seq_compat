@@ -2,15 +2,16 @@
 package main
 
 import (
-	"./geom"
 	"flag"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
-	"github.com/andrew-torda/goutil/pdb"
-	"github.com/andrew-torda/goutil/pdb/cmmn"
 	"sync"
+
+	"github.com/andrew-torda/goutil/pdb"
+	"github.com/andrew-torda/goutil/pdb/calpha/geom"
+	"github.com/andrew-torda/goutil/pdb/cmmn"
 )
 
 const (
@@ -55,7 +56,7 @@ func readpdb(fullpath string) ([]cmmn.XyzSl, error) {
 					}
 				}
 			}
-		if n_ca > 1 {
+			if n_ca > 1 {
 				ret = append(ret, ca)
 			}
 		}
