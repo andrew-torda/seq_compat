@@ -10,20 +10,57 @@ import (
 	. "github.com/andrew-torda/goutil/seq/common"
 	"github.com/andrew-torda/matrix"
 	"math"
+	"sync"
 )
 
 const (
 	badMap = math.MaxUint8 // marks a symbol as not seen
 )
 
+// xxx New tactics
+// we need a structure with a channel and a "once"
+// SetSymUsed calls mergelists as a once.Do(mergelists)
+// go config.once.Do(func() { mergelists(x.uChan) })
+
+// mergelists merges two lists of symbols that have been
+// used. It reads each list from a channel, merges them
+// and returns the merged list, which will have overwritten
+// the first list it received.
+
+type SymSync struct {
+	Once  sync.Once
+	UChan chan [MaxSym]bool
+}
+
+func mergelists(uChan chan [MaxSym]bool) {
+	//a1, a2 := <-uChan, <-uChan
+	a1 := <-uChan
+	a2 := <-uChan
+	for i := range a1 {
+		a1[i] = a1[i] || a2[i]
+	}
+	uChan <- a1
+	uChan <- a1
+	close(uChan)
+}
+
 // SetSymUsed fills out the bool slice which says whether or not a
-// symbol was used
-func (seqgrp *SeqGrp) SetSymUsed() {
+// symbol was used.
+// Normally, this is just a loop over all sequences. If we are combining
+// two seqgrp's, then the symbols used in group A should also be
+// marked used in group B and vice versa. If we get a second varadic
+// argument, it is a channel to be used in combining.
+func (seqgrp *SeqGrp) SetSymUsed(symSync ...*SymSync) {
 	for _, ss := range seqgrp.seqs {
 		s := ss.GetSeq()
 		for _, c := range s {
 			seqgrp.symUsed[c] = true
 		}
+	}
+	if symSync != nil {
+		go symSync[0].Once.Do(func() { mergelists(symSync[0].UChan) })
+		symSync[0].UChan <- seqgrp.symUsed
+		seqgrp.symUsed = <-symSync[0].UChan
 	}
 	seqgrp.usedKnwn = true
 }
@@ -255,6 +292,16 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 	}
 	return entropy, nil
 }
+
+// AdjustZeros takes a SeqGrp and applies a correction for zero entries.
+// It acts in-place, so it will make a mess of the data.
+// Consider a column in an alignment. In some column, there is no occurrence
+// of some symbols. This causes a log(0) problem in the formula for KL-divergence.
+// If we have n_seq sequences, we can guess that the missing symbol has
+// a probability of maximum 1/n_seq. Set all the zeroes to 1/n_seq, but
+// correct the non-zeroes, so our probabilities still sum to 1.
+// If n_zero is the number of sequences with a zero value, then
+// any non-zero probability
 
 // Compat takes one sequence (a reference). It returns the frequency of each
 // character from this sequence at each position in the alignment.
