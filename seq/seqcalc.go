@@ -293,16 +293,6 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 	return entropy, nil
 }
 
-// AdjustZeros takes a SeqGrp and applies a correction for zero entries.
-// It acts in-place, so it will make a mess of the data.
-// Consider a column in an alignment. In some column, there is no occurrence
-// of some symbols. This causes a log(0) problem in the formula for KL-divergence.
-// If we have n_seq sequences, we can guess that the missing symbol has
-// a probability of maximum 1/n_seq. Set all the zeroes to 1/n_seq, but
-// correct the non-zeroes, so our probabilities still sum to 1.
-// If n_zero is the number of sequences with a zero value, then
-// any non-zero probability
-
 // Compat takes one sequence (a reference). It returns the frequency of each
 // character from this sequence at each position in the alignment.
 // Do you want to remove the reference sequence from the calculations ?
