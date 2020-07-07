@@ -20,7 +20,7 @@ ABCD
 -HIJ`
 
 //func TestMain1(t *testing.T) {
-func ExampleOut () {
+func ExampleMain () {
 	fname, err := common.WrtTemp(seqstring)
 	if err != nil {
 		log.Fatal(err)
