@@ -3,6 +3,11 @@
 // Package seq provides functions for sequences,
 // which usually begin their lives in fasta format. It can
 // read and write them.
+//
+// Big change I should try. At the moment, we allocate every sequence
+// individually. I could allocate a big lump and set up pointers in there.
+// Even more fun... Use golang.org/x/exp/mmap and just set up slices so
+// they point in there.
 package seq
 
 import (
@@ -19,8 +24,6 @@ import (
 	. "github.com/andrew-torda/goutil/seq/common"
 	"github.com/andrew-torda/matrix"
 )
-
-type symbol byte
 
 // seq is the exported type.
 type seq struct {
@@ -68,26 +71,14 @@ type SeqGrp struct {
 	gapcnt   []int32 // count of gaps at each position
 	stype    SeqType
 	usedKnwn bool // Do we know how many symbols are used ?
-	freqKnwn bool // Have we converted counts of symbols to fractional probabilities ?
+	freqKnwn bool // are counts of symbols converted to fractional probabilities ?
+	typeKnwn bool // Have we called the function to work out our type dna/prot ?
 }
 
-// Str2SeqGrp takes some strings and returns them as a seqgrp.
-// sIn is a slice of strings which are the sequences.
-// prefix is an optional argument. Sequences need names/comments. If
-// prefix is not given, sequences will be called "> s1", "> s2", ...
-func Str2SeqGrp(sIn []string, prefix ...string) (seqgrp SeqGrp) {
-	var base string
-	if prefix == nil {
-		base = "s"
-	} else {
-		base = prefix[0]
-	}
-	for i, s := range sIn {
-		f := seq{cmmt: fmt.Sprint(">", base, i), seq: []byte(s)}
-		seqgrp.seqs = append(seqgrp.seqs, f)
-	}
-	return seqgrp
-}
+// GetLen returns the length of the first sequence.
+// If we are reading a multiple sequence alignment, this should be the length
+// of all sequences.
+func (seqgrp *SeqGrp) GetLen() int {return len(seqgrp.seqs[0].GetSeq())}
 
 // GetCounts gives us the normally non-exported counts
 func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d { return seqgrp.counts }
@@ -96,6 +87,8 @@ func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d { return seqgrp.counts }
 func (seqgrp *SeqGrp) GetSymUsed() [MaxSym]bool {
 	return seqgrp.symUsed
 }
+
+func (seqgrp *SeqGrp) TypeKnwn() bool { return seqgrp.typeKnwn }
 
 // GetRevmap returns the non-exported revmap
 func (seqgrp *SeqGrp) GetRevmap() []uint8 {
@@ -405,7 +398,6 @@ func lump_split(b []byte, white []bool, scnr *myscanner) (seq seq, err error) {
 	}
 	return
 }
-func breaker() {}
 
 // ReadSeqs takes a filename as input and reads sequences in fasta
 // format.  It returns n_duplicates and error. It should work with
@@ -638,4 +630,22 @@ func (seqgrp *SeqGrp) FindNdx(s string) int {
 		}
 	}
 	return -1
+}
+
+// Str2SeqGrp takes some strings and returns them as a seqgrp.
+// sIn is a slice of strings which are the sequences.
+// prefix is an optional argument. Sequences need names/comments. If
+// prefix is not given, sequences will be called "> s1", "> s2", ...
+func Str2SeqGrp(sIn []string, prefix ...string) (seqgrp SeqGrp) {
+	var base string
+	if prefix == nil {
+		base = "s"
+	} else {
+		base = prefix[0]
+	}
+	for i, s := range sIn {
+		f := seq{cmmt: fmt.Sprint(">", base, i), seq: []byte(s)}
+		seqgrp.seqs = append(seqgrp.seqs, f)
+	}
+	return seqgrp
 }
