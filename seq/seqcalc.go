@@ -6,36 +6,28 @@
 package seq
 
 import (
-	"fmt"
-	. "github.com/andrew-torda/goutil/seq/common"
-	"github.com/andrew-torda/matrix"
 	"math"
 	"sync"
+
+	. "github.com/andrew-torda/goutil/seq/common"
+	"github.com/andrew-torda/matrix"
 )
 
 const (
 	badMap = math.MaxUint8 // marks a symbol as not seen
 )
 
-// xxx New tactics
-// we need a structure with a channel and a "once"
-// SetSymUsed calls mergelists as a once.Do(mergelists)
-// go config.once.Do(func() { mergelists(x.uChan) })
-
-// mergelists merges two lists of symbols that have been
-// used. It reads each list from a channel, merges them
-// and returns the merged list, which will have overwritten
-// the first list it received.
-
 type SymSync struct {
 	Once  sync.Once
 	UChan chan [MaxSym]bool
 }
 
+// mergelists merges two lists of symbols that have been
+// used. It reads each list from a channel, merges them
+// and returns the merged list, which will have overwritten
+// the first list it received.
 func mergelists(uChan chan [MaxSym]bool) {
-	//a1, a2 := <-uChan, <-uChan
-	a1 := <-uChan
-	a2 := <-uChan
+	a1, a2 := <-uChan, <-uChan
 	for i := range a1 {
 		a1[i] = a1[i] || a2[i]
 	}
@@ -71,7 +63,7 @@ func (seqgrp *SeqGrp) GetType() SeqType {
 	if seqgrp.stype != Unknown { // If the sequence type has been
 		return seqgrp.stype //      set, just return it.
 	}
-
+	seqgrp.typeKnwn = true // Set here because it will be known by end of func
 	if seqgrp.usedKnwn != true {
 		seqgrp.SetSymUsed()
 	}
@@ -128,7 +120,7 @@ func (seqgrp *SeqGrp) mapsyms() error {
 	return nil
 }
 
-// Usage by site counts how many of each symbol/character appear at
+// UsageSite counts how many of each symbol/character appear at
 // each site in the alignment.
 // counts.Mat looks like [length_of_seq][number_of_types]
 // We store it as a float32, since it will later usually be normalised
@@ -156,9 +148,12 @@ func (seqgrp *SeqGrp) UsageSite() {
 // If gapsAreChar is true, gaps ("-") are treated as a valid character
 // type. Otherwise they are removed from the tallies.
 // If gapsAreChar is not true, then
-//    a symbol's fraction is the fraction of non-gaps in which you find this symbol
-//    the gap's fraction is the fraction of the total number of residues in which one finds a gap.
-// This means that the fractions of non-gaps adds up to 1, and then you have a bit more due to gaps.
+//    a symbol's fraction is the fraction of non-gaps
+//                in which you find this symbol
+//    the gap's fraction is the fraction of the total
+//                number of residues in which one finds a gap.
+// This means that the fractions of non-gaps adds up to 1,
+// and then you have a bit more due to gaps.
 // It also means that the data looks correct when you plot it out.
 func (seqgrp *SeqGrp) UsageFrac(gapsAreChar bool) {
 	if seqgrp.counts == nil {
@@ -219,19 +214,12 @@ func (seqgrp *SeqGrp) GapFrac() []float32 {
 	return seqgrp.counts.Mat[gappos]
 }
 
-// Entropy calculates sequence entropy. It returns the result as a slice
-// of the same length as the sequences. It needs to be told if gaps are
-// characters, or should be ignored.
-// If the sequence is a nucleotide or protein, we know what logarithm to use.
-// If the sequence is unknown, we use the log base the number different
-// symbols
-func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
-	if !seqgrp.freqKnwn {
-		seqgrp.UsageFrac(gapsAreChar)
+// GetLogBase returns the base to be used for logarithms
+func (seqgrp *SeqGrp) GetLogBase(gapsAreChar bool) (nSym int) {
+	const progbug = "program bug in GetLogBase"
+	if !seqgrp.usedKnwn {
+		seqgrp.UsageSite()
 	}
-	var nSym float64
-	const progbug = "program bug in Entropy"
-
 	if gapsAreChar {
 		switch seqgrp.GetType() {
 		case DNA, RNA, Ntide:
@@ -239,9 +227,9 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 		case Protein:
 			nSym = 21 // 20 residues, + gap
 		case Unknown:
-			nSym = float64(len(seqgrp.revmap))
+			nSym = len(seqgrp.revmap)
 		default:
-			return nil, fmt.Errorf(progbug)
+			panic(progbug)
 		}
 	} else { // gaps are ignored
 		switch seqgrp.GetType() {
@@ -250,16 +238,32 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 		case Protein:
 			nSym = 20
 		case Unknown:
-			nSym = float64(len(seqgrp.revmap))
+			nSym = len(seqgrp.revmap)
 		default:
-			return nil, fmt.Errorf(progbug)
+			panic (progbug)
 		}
 	}
-	logfac := 1.0 / math.Log(nSym)
-	entropy := make([]float32, len(seqgrp.seqs[0].GetSeq()))
+	return nSym
+}
+
+// Entropy calculates sequence entropy. It returns the result as a slice
+// of the same length as the sequences. It needs to be told if gaps are
+// characters, or should be ignored.
+// If the sequence is a nucleotide or protein, we know what logarithm to use.
+// If the sequence is unknown, we use the log base the number different
+// symbols
+// The caller allocates space for the result (entropy).
+func (seqgrp *SeqGrp) Entropy(gapsAreChar bool, entropy []float32) (error) {
+	if !seqgrp.freqKnwn {
+		seqgrp.UsageFrac(gapsAreChar)
+	}
+
+	nSym := seqgrp.GetLogBase(gapsAreChar)
+	logfac := 1.0 / math.Log(float64(nSym))
+
 	nrow, ncol := seqgrp.counts.Size()
-	if gapsAreChar {
-		for icol := 0; icol < ncol; icol++ {
+	if gapsAreChar { //                         Gaps are just a character, so
+		for icol := 0; icol < ncol; icol++ { // no need for special treatment
 			total := 0.0
 			for irow := 0; irow < nrow; irow++ {
 				f := float64(seqgrp.counts.Mat[irow][icol])
@@ -290,7 +294,7 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool) ([]float32, error) {
 		}
 
 	}
-	return entropy, nil
+	return nil
 }
 
 // Compat takes one sequence (a reference). It returns the frequency of each
@@ -309,7 +313,6 @@ func (seqgrp *SeqGrp) Compat(refseq []byte, gapsAreChar bool) []float32 {
 	}
 
 	for i, c := range refseq {
-		ic := seqgrp.GetMap(c)
 		if c == GapChar {
 			compat[i] = 0
 			continue
@@ -318,10 +321,10 @@ func (seqgrp *SeqGrp) Compat(refseq []byte, gapsAreChar bool) []float32 {
 		if nseq < 1.001 { // It means, we have a lonely insertion
 			compat[i] = 0
 		} else {
+			ic := seqgrp.GetMap(c)
 			fracC := seqgrp.counts.Mat[ic][i]
 			nthischar := fracC*nseq - 1
-			f := nthischar / (nseq - 1)
-			compat[i] = f
+			compat[i] = nthischar / (nseq - 1)
 		}
 	}
 	return compat
