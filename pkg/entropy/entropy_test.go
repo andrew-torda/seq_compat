@@ -3,8 +3,10 @@
 package entropy_test
 
 import (
+	"github.com/andrew-torda/goutil/seq"
 	"github.com/andrew-torda/goutil/seq/common"
 	. "github.com/andrew-torda/seq_compat/pkg/entropy"
+	"math"
 	"os"
 	"testing"
 )
@@ -29,11 +31,10 @@ ACGT
 ACGT
 `
 
-
-func TestMain1(t *testing.T) {
+func ExampleMain(t *testing.T) {
 	var fname string
 	var err error
-	runs := []string {seqstring, seqstring2}
+	runs := []string{seqstring, seqstring2}
 	for _, s := range runs {
 		if fname, err = common.WrtTemp(s); err != nil {
 			t.Fatal("Fail writing test file")
@@ -44,5 +45,41 @@ func TestMain1(t *testing.T) {
 			t.Fatal("bust on simple test", err)
 		}
 	}
+	// Output:
+	// boo
+}
 
+// approxEqual
+func approxEqual(x, y float32) bool {
+	const eps = 0.000001
+	d := x - y
+	if d > eps || d < -eps {
+		return false
+	}
+	return true
+}
+
+// Test2
+func Test2(t *testing.T) {
+	log4 := func(x float64) float64 { return math.Log(x) / math.Log(4.) }
+	ss := [][]string{
+		{"aaaa", "abab", "acbb", "adbb"},
+	}
+
+	x3of4 := -float32((3./4)*(log4(3./4)) - 1./4)
+	wantEnt := []float32{0, 1, 0.5, x3of4}
+	seqgrp := seq.Str2SeqGrp(ss[0], "tt0")
+	if seqgrp.GetNSym() != 4 {
+		t.Fatal("Test2 not written correctly")
+	}
+	gapsAreChar := false
+	gotEnt := make([]float32, seqgrp.GetLen())
+	if err := seqgrp.Entropy(gapsAreChar, gotEnt); err != nil {
+		t.Fatal(err)
+	}
+	for i := range gotEnt {
+		if gotEnt[i] != wantEnt[i] {
+			t.Fatal("entropy i", i, "got", gotEnt[i], "want", wantEnt[i])
+		}
+	}
 }
