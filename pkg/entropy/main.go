@@ -13,7 +13,7 @@ type ntrpyargs struct {
 	entropy []float32 // sequence entropy
 	gapfrac []float32 // fraction of gap entries in column
 	compat  []float32 // compatibility of reference sequence
-	outfile string    // write to a file or standard input
+	outfile string    // write to a file or standard input // Check.. is this used ? XX
 	refseq  []byte    // nil or reference sequence
 	offset  int       // residue number offset on output
 }
@@ -59,7 +59,7 @@ type CmdFlag struct {
 	Offset      int    // Add this to the residue numbering on output
 	GapsAreChar bool   // Do we keep gaps ? Are gaps a valid symbol ?
 	NSym        int    // Set the number of symbols in sequences
-	RefSeq      string // A reference string, whose compatibility will be calculated
+	RefSeq      string // A reference seq, whose compatibility will be calculated
 }
 
 // Mymain is the main function for calculating entropy and writing to a file
@@ -82,7 +82,7 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 
 	if flags.RefSeq != "" {
 		if ndxSeq := seqgrp.FindNdx(flags.RefSeq); ndxSeq == -1 {
-			return (fmt.Errorf("Fail finding reference sequence \"%s\"\n", flags.RefSeq))
+			return (fmt.Errorf("Cannot find ref sequence \"%s\"\n", flags.RefSeq))
 		} else {
 			ntrpyargs.refseq = seqgrp.GetSeqSlc()[ndxSeq].GetSeq()
 			ntrpyargs.compat = seqgrp.Compat(ntrpyargs.refseq, flags.GapsAreChar)
@@ -90,7 +90,8 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 	}
 	seqgrp.Upper()
 	ntrpyargs.gapfrac = seqgrp.GapFrac()
-	if ntrpyargs.entropy, err = seqgrp.Entropy(flags.GapsAreChar); err != nil {
+	ntrpyargs.entropy = make ([]float32, seqgrp.GetLen())
+	if err = seqgrp.Entropy(flags.GapsAreChar, ntrpyargs.entropy); err != nil {
 		return err
 	}
 	
