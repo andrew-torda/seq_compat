@@ -38,13 +38,14 @@ func (seqx *SeqX) GetLen() int { return len(seqx.entropy) }
 // during testing.
 func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	var err error
-	seqX.entropy, err = seqgrp.Entropy(flags.GapsAreChar)
+	seqX.entropy = make([]float32, seqgrp.GetLen())
+	err = seqgrp.Entropy(flags.GapsAreChar, seqX.entropy)
 	if err != nil {
 		return err
 	}
 	var gapsAreChars = true
 
-	logbase, err := seqgrp.GetLogBase(gapsAreChars)
+	logbase := seqgrp.GetLogBase(gapsAreChars)
 	if err != nil {
 		return err
 	}
@@ -79,12 +80,12 @@ func getent(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 	if e != nil {
 		*err = fmt.Errorf("Fail reading sequences: %w", e)
 		bailout()
-		return //
+		return
 	}
 	if seqgrp.GetNSeq() == 0 {
 		*err = errors.New("Zero sequences found in file " + infile)
 		bailout()
-		return //
+		return
 	}
 	seqgrp.Upper()
 
@@ -114,57 +115,48 @@ func readtwofiles(flags *CmdFlag, file1, file2 string,
 }
 
 // kl calculates the kullbach-leibler distance
-// When in doubt think
-//  d(p|q) = sum(p_i log (p_i/q_i))
-//         = sum ( p_i (log(p_i) - log(q_i)))
-//         = sum (p_i (log(p_i)) - p_i log(q_i))    , first term is just entropy of p
-//         = s_p - p_i log(q_i)         and this is what we program up.
-//                 ^^^^^^^^^^^ This is called "cross" in the code below
 // When one of the distributions goes to zero, divergence goes to
-// infinity. Let us try either setting it to a max value or better...
+// infinity. Use a pseudo-count philosophy.
 // We have N sequences for distribution q. We say the frequency is less
-// than 1/ N. This means we calculate log(1 / (N+1) and use it for missing values.
-// Need ent_p, p, q
+// than 1/ N. We say the frequency is 1 / (N + 1).
+// remove ent_p from this structure after debugging.
 type KL_in struct {
-	ent_p    []float32   // entropy for p distribution
+	//	ent_p    []float32   // entropy for p distribution
 	counts_p [][]float32 // counts/frequencies for p distribution
 	counts_q [][]float32 // " "        "   "    "  q distribution
 	num_q    int         // number of sequences in q distribution
 	logbase  int         // base to use for logarithms
 }
-func breaker(){}
+
 func kl(kl_in *KL_in, kl []float32) {
 	logbase := math.Log(float64(kl_in.logbase))
-	logb := func(x float32) float32 { // log will be base 4 or 20
+	logb := func(x float64) float32 { // return logarithm base logbase
 		return float32(math.Log(float64(x)) / logbase)
 	}
-	pLnPQ := make([]float32, len(kl_in.ent_p)) // p log (q) term
-	one_num_q := 1.0 / float32(kl_in.num_q+1)
-	log_one_num_q := logb(one_num_q)
+
+	one_num_q := 1. / float64(kl_in.num_q+1)
 	seqLen := len(kl_in.counts_p[0])
 
-	for icol := 0; icol < seqLen; icol++ { //      i position in sequence
-		if (icol >= 3) {breaker()}
-		for irow := 0; irow < kl_in.logbase; irow++ { //  j is symbol
-			if kl_in.counts_p[irow][icol] == 0 {
+	for icol := 0; icol < seqLen; icol++ { //            icol position in seq
+		for irow := 0; irow < kl_in.logbase; irow++ { // irow is symbol
+			pcount := float64(kl_in.counts_p[irow][icol])
+			if pcount == 0 {
 				continue
 			}
-			var log_q float32
-			if kl_in.counts_q[irow][icol] == 0 {
-				log_q = log_one_num_q
-			} else {
-				log_q = logb(kl_in.counts_q[irow][icol])
+			qcount := float64(kl_in.counts_q[irow][icol]) // qcount is wrong
+			if qcount == 0 {                              // seems to be five. has it not been normalisedo
+				qcount = one_num_q // epsilon/pseudo-counts
 			}
-			pLnPQ[icol] += kl_in.counts_p[irow][icol] * log_q
+			tmp := logb(pcount / qcount)
+			tmp *= float32(pcount)
+			kl[icol] += tmp
 		}
-	} // pLnPQ now holds the second term in the formula
-	for i, ep := range kl_in.ent_p {
-		kl[i] = -ep - pLnPQ[i]
 	}
+
 }
 
-// innerCosProd does the cosine product of two vectors
-func innerCosProd(p, q []float32) float32 {
+// innerCosSim does the cosine product of two vectors
+func innerCosSim(p, q []float32) float32 {
 	var p_sq, q_sq, res float64
 	for _, x := range p {
 		p_sq += float64(x * x)
@@ -182,7 +174,7 @@ func innerCosProd(p, q []float32) float32 {
 	return float32(res)
 }
 
-// calcCosProd calculates the cosine product of two distributions
+// calcCosSim calculates the cosine product of two distributions
 // Walk down each column in p. Sum the squares. Take the square root.
 // Walk down each column and divide by the square root.
 // Repeat for the second vector.
@@ -198,7 +190,7 @@ func calcCosSim(counts_p [][]float32, counts_q [][]float32, cosSim []float32) {
 			pvec[j] = counts_p[i][j]
 			qvec[j] = counts_q[i][j]
 		}
-		r := innerCosProd(pvec, qvec)
+		r := innerCosSim(pvec, qvec)
 		cosSim[i] = r
 	}
 }
@@ -208,7 +200,6 @@ func calcCosSim(counts_p [][]float32, counts_q [][]float32, cosSim []float32) {
 // the arguments reversed.
 func klFromSeqX(seqXP, seqXQ *SeqX, klP []float32) {
 	klIn := KL_in{
-		ent_p:    seqXQ.entropy,
 		counts_p: seqXP.counts.Mat,
 		counts_q: seqXQ.counts.Mat,
 		num_q:    seqXQ.nseq,
