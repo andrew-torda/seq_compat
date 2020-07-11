@@ -24,22 +24,24 @@ type CmdFlag struct {
 // We copy the slices we need and can free up things like the original
 // sequences. It is only exported so we can use it in testing.
 type SeqX struct {
-	entropy []float32
+//	entropy []float32
 	counts  *matrix.FMatrix2d
 	revmap  []uint8
 	nseq    int
+	len     int // Sequence length
 	logbase int
 }
 
-func (seqx *SeqX) GetLen() int { return len(seqx.entropy) }
+func (seqx *SeqX) GetLen() int { return seqx.len }
 
 // seqX gets the relevant information for KL calculation from a sequence
 // group. It only goes into its own function so it can be called
 // during testing.
 func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	var err error
-	seqX.entropy = make([]float32, seqgrp.GetLen())
-	err = seqgrp.Entropy(flags.GapsAreChar, seqX.entropy)
+	//	seqX.entropy = make([]float32, seqgrp.GetLen())
+	//	err = seqgrp.Entropy(flags.GapsAreChar, seqX.entropy)
+
 	if err != nil {
 		return err
 	}
@@ -49,6 +51,8 @@ func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	if err != nil {
 		return err
 	}
+	seqgrp.UsageFrac( gapsAreChars)
+	seqX.len    = seqgrp.GetLen()
 	seqX.counts = seqgrp.GetCounts()
 	seqX.revmap = seqgrp.GetRevmap()
 	seqX.nseq = seqgrp.GetNSeq()
@@ -228,5 +232,6 @@ func Mymain(flags *CmdFlag, fileP, fileQ, outfile string) (err error) {
 	klFromSeqX(&seqXP, &seqXQ, klP)
 	klFromSeqX(&seqXQ, &seqXP, klQ)
 	calcCosSim(seqXP.counts.Mat, seqXQ.counts.Mat, cosSim)
+	// Now get the entropy for each set
 	return nil
 }
