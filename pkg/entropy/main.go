@@ -91,9 +91,7 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 	seqgrp.Upper()
 	ntrpyargs.gapfrac = seqgrp.GapFrac()
 	ntrpyargs.entropy = make ([]float32, seqgrp.GetLen())
-	if err = seqgrp.Entropy(flags.GapsAreChar, ntrpyargs.entropy); err != nil {
-		return err
-	}
+	seqgrp.Entropy(flags.GapsAreChar, ntrpyargs.entropy)
 	
 	if err = writeNtrpy(ntrpyargs); err != nil {
 		return err

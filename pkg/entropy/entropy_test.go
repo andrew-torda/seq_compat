@@ -74,9 +74,8 @@ func Test2(t *testing.T) {
 	}
 	gapsAreChar := false
 	gotEnt := make([]float32, seqgrp.GetLen())
-	if err := seqgrp.Entropy(gapsAreChar, gotEnt); err != nil {
-		t.Fatal(err)
-	}
+	seqgrp.Entropy(gapsAreChar, gotEnt)
+
 	for i := range gotEnt {
 		if gotEnt[i] != wantEnt[i] {
 			t.Fatal("entropy i", i, "got", gotEnt[i], "want", wantEnt[i])
