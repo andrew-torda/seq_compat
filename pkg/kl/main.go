@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/andrew-torda/goutil/seq"
+	"github.com/andrew-torda/goutil/seq/common"
 	"github.com/andrew-torda/matrix"
 )
 
@@ -24,12 +25,12 @@ type CmdFlag struct {
 // We copy the slices we need and can free up things like the original
 // sequences. It is only exported so we can use it in testing.
 type SeqX struct {
-//	entropy []float32
-	counts  *matrix.FMatrix2d
-	revmap  []uint8
-	nseq    int
-	len     int // Sequence length
-	logbase int
+	counts     *matrix.FMatrix2d
+	revmap     []uint8
+	nseq       int
+	len        int // Sequence length
+	logbase    int
+	gapMapping uint8 // which row is the gap character
 }
 
 func (seqx *SeqX) GetLen() int { return seqx.len }
@@ -45,18 +46,19 @@ func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	if err != nil {
 		return err
 	}
-	var gapsAreChars = true
+	var gapsAreChars = false
 
 	logbase := seqgrp.GetLogBase(gapsAreChars)
 	if err != nil {
 		return err
 	}
-	seqgrp.UsageFrac( gapsAreChars)
-	seqX.len    = seqgrp.GetLen()
+	seqgrp.UsageFrac(gapsAreChars)
+	seqX.len = seqgrp.GetLen()
 	seqX.counts = seqgrp.GetCounts()
 	seqX.revmap = seqgrp.GetRevmap()
 	seqX.nseq = seqgrp.GetNSeq()
 	seqX.logbase = logbase
+	seqX.gapMapping = seqgrp.GetMapping(common.GapChar)
 	return nil
 }
 
@@ -74,6 +76,7 @@ func getent(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 	if wg != nil { // Only use the wait group for the
 		defer wg.Done() // background goroutine.
 	}
+
 	s_opts := &seq.Options{
 		Vbsty: 0, Keep_gaps_rd: true,
 		Dry_run:      true,
@@ -189,10 +192,10 @@ func calcCosSim(counts_p [][]float32, counts_q [][]float32, cosSim []float32) {
 	}
 	pvec := make([]float32, len(counts_p))
 	qvec := make([]float32, len(counts_p))
-	for i := range counts_p { // i is position in sequence
-		for j := 0; j < len(counts_p); j++ {
-			pvec[j] = counts_p[i][j]
-			qvec[j] = counts_q[i][j]
+	for i := range counts_p { //                 i is position in sequence
+		for j := 0; j < len(counts_p); j++ { //  j is sequence number
+			pvec[j] = counts_p[j][i]
+			qvec[j] = counts_q[j][i]
 		}
 		r := innerCosSim(pvec, qvec)
 		cosSim[i] = r
@@ -202,7 +205,8 @@ func calcCosSim(counts_p [][]float32, counts_q [][]float32, cosSim []float32) {
 // klFromSeqX takes a pair of seqXs and returns the KL
 // distance in one direction. To get the other direction, call with
 // the arguments reversed.
-func klFromSeqX(seqXP, seqXQ *SeqX, klP []float32) {
+func klFromSeqX(seqXP, seqXQ *SeqX, klP []float32, wg *sync.WaitGroup) {
+	defer wg.Done()
 	klIn := KL_in{
 		counts_p: seqXP.counts.Mat,
 		counts_q: seqXQ.counts.Mat,
@@ -212,26 +216,70 @@ func klFromSeqX(seqXP, seqXQ *SeqX, klP []float32) {
 	kl(&klIn, klP)
 }
 
-// Mymain is the main function for kullback-leibler distance
-func Mymain(flags *CmdFlag, fileP, fileQ, outfile string) (err error) {
-	var seqXP, seqXQ SeqX
-
+// sane checks some properties to catch errors
+func sane(seqXP, seqXQ *SeqX, fileP, fileQ string) error {
 	const mismatch = "Sequence length mismatch. %s: len %d, %s: len %d"
-	if err := readtwofiles(flags, fileP, fileQ, &seqXP, &seqXQ); err != nil {
-		return err
-	} // Maybe take the next few lines and bundle them up into sanitycheck()
+	const toofew = "File %s seems to have too few sequences"
+	if seqXP.nseq <= 1 {
+		return fmt.Errorf(toofew, fileP)
+	}
+	if seqXQ.nseq <= 1 {
+		return fmt.Errorf(toofew, fileQ)
+	}
 	lenAln := seqXP.GetLen() // Check alignments have same length.
 	if l2 := seqXQ.GetLen(); l2 != lenAln {
 		return fmt.Errorf(mismatch, fileP, lenAln, fileQ, l2)
 	}
-	// later, lets change this to one allocation and make three pieces
-	cosSim := make([]float32, seqXP.GetLen())
-	klP := make([]float32, seqXP.GetLen())
-	klQ := make([]float32, seqXP.GetLen())
-	// We can do the next three calculations at the same time
-	klFromSeqX(&seqXP, &seqXQ, klP)
-	klFromSeqX(&seqXQ, &seqXP, klQ)
+	return nil
+}
+
+// entropywrap is a wrapper around the call to entropy, just
+// to allow us to use a waitgroup
+func entropyWrap(gapsAreChar bool, matrix [][]float32, entropy []float32,
+	logbase int, gapMapping uint8, wg *sync.WaitGroup) {
+	defer wg.Done()
+	seq.EntropyFromArray(gapsAreChar, matrix, entropy, logbase, gapMapping)
+}
+
+// calcInner is the inner function to calculate entropies and KL distances.
+// It could have been in main, but is in its own function so we can expose it
+// for testing. We could avoid the five calls to make(). Call it once and divide
+// into five pieces.
+func calcInner(seqXP, seqXQ SeqX) (klP, klQ, entropyP, entropyQ, cosSim []float32) {
+	var wg sync.WaitGroup
+	klP = make([]float32, seqXP.GetLen())
+	wg.Add(1)
+	go klFromSeqX(&seqXP, &seqXQ, klP, &wg)
+	klQ = make([]float32, seqXP.GetLen())
+	wg.Add(1)
+	go klFromSeqX(&seqXQ, &seqXP, klQ, &wg)
+
+	const gapsAreChar = false
+	entropyP = make([]float32, seqXP.GetLen())
+	wg.Add(1) // race on next line
+	go entropyWrap(gapsAreChar, seqXP.counts.Mat, entropyP, seqXP.logbase, seqXP.gapMapping, &wg)
+	entropyQ = make([]float32, seqXP.GetLen())
+	wg.Add(1)
+	go entropyWrap(gapsAreChar, seqXQ.counts.Mat, entropyQ, seqXQ.logbase, seqXQ.gapMapping, &wg)
+	cosSim = make([]float32, seqXP.GetLen())
 	calcCosSim(seqXP.counts.Mat, seqXQ.counts.Mat, cosSim)
-	// Now get the entropy for each set
+
+	wg.Wait()
+	return klP, klQ, entropyP, entropyQ, cosSim
+}
+
+// Mymain is the main function for kullback-leibler distance
+func Mymain(flags *CmdFlag, fileP, fileQ, outfile string) (err error) {
+	var seqXP, seqXQ SeqX
+
+	if err := readtwofiles(flags, fileP, fileQ, &seqXP, &seqXQ); err != nil {
+		return err
+	}
+	if err := sane(&seqXP, &seqXQ, fileP, fileQ); err != nil {
+		return err
+	}
+
+	klP, klQ, entropyP, entropyQ, cosSim := calcInner(seqXP, seqXQ)
+	print (klP, klQ, entropyP, entropyQ, cosSim)
 	return nil
 }
