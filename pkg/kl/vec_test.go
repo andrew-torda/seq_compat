@@ -55,9 +55,9 @@ func TestInnerCosProd(t *testing.T) {
 	scaleVal := f32{1, 13, 0.15}
 	for _, pair := range pairs {
 		for _, x := range scaleVal {
-			r := InnerCosProd(pair.v1, scale(pair.v1, x))
-			s := InnerCosProd(scale(pair.v1, x), pair.v1)
-			tt := InnerCosProd(pair.v1, scale(pair.v1, -x))
+			r := InnerCosSim(pair.v1, scale(pair.v1, x))
+			s := InnerCosSim(scale(pair.v1, x), pair.v1)
+			tt := InnerCosSim(pair.v1, scale(pair.v1, -x))
 			if r != s {
 				t.Fatalf("Self multiply argument order r %f s %f, vec %v", r, s, pair.v1)
 			}
@@ -72,8 +72,8 @@ func TestInnerCosProd(t *testing.T) {
 
 	for _, pair := range pairs {
 		for _, x := range scaleVal {
-			r := InnerCosProd(scale(pair.v1, x), pair.v2)
-			s := InnerCosProd(scale(pair.v1, -x), pair.v2)
+			r := InnerCosSim(scale(pair.v1, x), pair.v2)
+			s := InnerCosSim(scale(pair.v1, -x), pair.v2)
 			if !approxequal(r, pair.res) {
 				t.Fatalf("Got %f wanted %f, pair %v, %v", r, pair.res, scale(pair.v1, x), pair.v2)
 			}
