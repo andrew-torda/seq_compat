@@ -1,5 +1,6 @@
 package kl
 
 var GetSeqX = getSeqX
-var InnerCosProd = innerCosProd
+var InnerCosSim = innerCosSim
 var KlFromSeqX = klFromSeqX
+var CalcInner = calcInner
