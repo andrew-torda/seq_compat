@@ -45,17 +45,29 @@ func TestSimple1(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-func approxEqual (x, y float32) bool {
+
+func approxEqual(x, y float32) bool {
 	d := x - y
 	const eps = 0.0001
-	if d < -eps || d > eps { return false }
+	if d < -eps || d > eps {
+		return false
+	}
 	return true
 }
+
+// f to save typing
+func f(want, got float32, i int, name string, t *testing.T) {
+	const bust = "%s wanted %f got %f column %d"
+	if !approxEqual(want, got) {
+		t.Fatalf(bust, name, want, got, i)
+	}
+}
+func breaker() {}
 // TestKL is for the Kullbach-Leibler distance. It is a bit difficult since
 // the test columns run across the page.
 func TestKL(t *testing.T) {
 	// p log p/q
-	var messyA, messyB float32
+	var messyA, messyB, messyC float32
 	{
 		log4 := math.Log(4)
 		p1a := 1.      // a frac in column
@@ -69,16 +81,23 @@ func TestKL(t *testing.T) {
 		a = p2a * (math.Log(p2a/p1a) / log4)
 		b = p2b * (math.Log(p2b/p1b) / log4)
 		messyB = float32(a + b)
+
+		messyC = float32(math.Log (5.) / log4)
 	}
 	ss := [][]string{
-		{"aaaa", "bbaa", "ccaa", "dcaa"},
-		{"aaaa", "bbaa", "ccab", "dcab"},
+		{"aaaaa", "bbaaa", "ccaaa", "dcaaa"},
+		{"aaaab", "bbaab", "ccabb", "dcabb"},
 	}
-	kl_r := []float32{0, 0, 0, messyA}
-	kl_s := []float32{0, 0, 0, messyB}
+
+	kl_r := []float32{0, 0, 0, messyA, messyC}
+	kl_s := []float32{0, 0, 0, messyB, messyC}
+	ent_r := []float32{1, 3. / 4, 0, 0, 0}
+	ent_s := []float32{1, 3. / 4, 0, 1. / 2, 0}
+	cosS := []float32{1, 1, 1, float32(1. / math.Sqrt(2.)), 0}
 	var flags CmdFlag
 	seqgrp1 := seq.Str2SeqGrp(ss[0], "tt0")
 	seqgrp2 := seq.Str2SeqGrp(ss[1], "tt1")
+
 	var seqX1, seqX2 SeqX
 	if err := GetSeqX(&seqgrp1, &seqX1, &flags); err != nil {
 		t.Fatal(err)
@@ -87,21 +106,14 @@ func TestKL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	klP := make([]float32, seqX1.GetLen())
-	KlFromSeqX(&seqX1, &seqX2, klP)
-	const bust = "kl calc wanted %f got %f\ncolumn %d, set %d"
-	for i, _ := range klP {
-		if !approxEqual (kl_r[i],  klP[i]) {
-			t.Fatalf(bust, kl_r[i], klP[i], i, 1)
-		}
-	}
+	klP, klQ, entropyP, entropyQ, cosSim := CalcInner(seqX1, seqX2)
+	for i := range klP {
+		f(kl_r[i], klP[i], i, "klP", t)
+		f(kl_s[i], klQ[i], i, "klQ", t)
 
-	klQ := make([]float32, seqX1.GetLen())
-	KlFromSeqX(&seqX2, &seqX1, klQ)
-	for i, _ := range klQ {
-		if !approxEqual(kl_s[i], klQ[i]) {
-			t.Fatalf(bust, kl_s[i], klQ[i], i, 2)
-		}
+		f(ent_r[i], entropyP[i], i, "entropy P", t) // race
+		f(ent_s[i], entropyQ[i], i, "entropy Q", t)
+		f(cosS[i], cosSim[i], i, "cosine sim", t)
 	}
 }
 
