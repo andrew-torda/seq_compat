@@ -78,15 +78,18 @@ type SeqGrp struct {
 // GetLen returns the length of the first sequence.
 // If we are reading a multiple sequence alignment, this should be the length
 // of all sequences.
-func (seqgrp *SeqGrp) GetLen() int {return len(seqgrp.seqs[0].GetSeq())}
+func (seqgrp *SeqGrp) GetLen() int { return len(seqgrp.seqs[0].GetSeq()) }
 
 // GetCounts gives us the normally non-exported counts
-func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d { return seqgrp.counts }
-
-// GetSymUsed returns the normally non-exported symUsed
-func (seqgrp *SeqGrp) GetSymUsed() [MaxSym]bool {
-	return seqgrp.symUsed
+func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d {
+	if seqgrp.counts == nil {
+		seqgrp.UsageSite()
+	}
+	return seqgrp.counts
 }
+
+// getSymUsed returns the normally non-exported symUsed
+func (seqgrp *SeqGrp) GetSymUsed() [MaxSym]bool { return seqgrp.symUsed }
 
 func (seqgrp *SeqGrp) TypeKnwn() bool { return seqgrp.typeKnwn }
 
@@ -94,6 +97,9 @@ func (seqgrp *SeqGrp) TypeKnwn() bool { return seqgrp.typeKnwn }
 func (seqgrp *SeqGrp) GetRevmap() []uint8 {
 	return seqgrp.revmap
 }
+
+// GetMapping returns the mapping (row) for a specific character
+func (seqgrp *SeqGrp) GetMapping(c uint8) uint8 { return seqgrp.mapping[c] }
 
 // Clear gets rid of any calculated quantities. Useful for testing, but
 // rarely for normal use.
@@ -133,11 +139,6 @@ func (seqgrp *SeqGrp) GetSeqSlc() []seq { return seqgrp.seqs }
 // tallies. So, seq[i].GetMap() tells us where to put info about this
 // character.
 func (seqgrp *SeqGrp) GetMap(c byte) uint8 { return seqgrp.mapping[c] }
-
-// seq.Get_cmmt returns the comment from a sequence
-func (s seq) get_cmmt() string {
-	return s.cmmt[:]
-}
 
 // Function GetSeq returns the sequence as the original byte slice
 func (s seq) GetSeq() []byte { return s.seq }
@@ -385,7 +386,7 @@ func lump_split(b []byte, white []bool, scnr *myscanner) (seq seq, err error) {
 			nw++
 		}
 	}
-	seq.seq = make([]byte, nw)
+	seq.seq = make([]byte, nw) // This is where we could allocate from a pool
 	i := 0
 	for _, c := range b {
 		if !white[c] {
@@ -538,14 +539,14 @@ func Readfiles(fname []string, s_opts *Options) (seqgrp SeqGrp, n_dup int, err e
 	return
 }
 
-// Write_to_f takes a filename and a slice of sequences.
+// WriteToF takes a filename and a slice of sequences.
 // It writes the sequences to the file.
 // For each sequence, it should check if the sequence has been
 // set to nil.
 // What I could change: If we are removing gaps, we make a buffer which grows
 // character by character via WriteByte(). I could make a buffer beforehand
 // and grow as necessary.
-func Write_to_f(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
+func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 	const c_per_line = 60
 	var nilstring string
 	var outfile_fp io.Writer
@@ -568,7 +569,7 @@ func Write_to_f(outseq_fname string, seq_set []seq, s_opts *Options) (err error)
 		if seq.Empty() {
 			continue
 		}
-		fmt.Fprintf(outfile_fp, "%c%s\n", cmmt_char, seq.get_cmmt())
+		fmt.Fprintf(outfile_fp, "%c%s\n", cmmt_char, seq.GetCmmt())
 
 		s := seq.GetSeq()
 		if s_opts.Rmv_gaps_wrt { // we have to remove gap characters on output
@@ -611,7 +612,7 @@ func (s *seq) Copy() (t seq) {
 // a single string
 func (s seq) String() (t string) {
 	if len(s.cmmt) > 0 {
-		t = fmt.Sprintf("%c%s\n", cmmt_char, s.get_cmmt())
+		t = fmt.Sprintf("%c%s\n", cmmt_char, s.GetCmmt())
 	} else {
 		t = ">\n"
 	}
@@ -644,7 +645,7 @@ func Str2SeqGrp(sIn []string, prefix ...string) (seqgrp SeqGrp) {
 		base = prefix[0]
 	}
 	for i, s := range sIn {
-		f := seq{cmmt: fmt.Sprint(">", base, i), seq: []byte(s)}
+		f := seq{cmmt: fmt.Sprint(base, i), seq: []byte(s)}
 		seqgrp.seqs = append(seqgrp.seqs, f)
 	}
 	return seqgrp
