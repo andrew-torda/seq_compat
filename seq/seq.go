@@ -4,6 +4,9 @@
 // which usually begin their lives in fasta format. It can
 // read and write them.
 //
+
+// Organisation. Move everything to do with the seq structure to the start.
+// Then think about moving all the seqgrp stuff to its own file.
 // Big change I should try. At the moment, we allocate every sequence
 // individually. I could allocate a big lump and set up pointers in there.
 // Even more fun... Use golang.org/x/exp/mmap and just set up slices so
@@ -75,70 +78,6 @@ type SeqGrp struct {
 	typeKnwn bool // Have we called the function to work out our type dna/prot ?
 }
 
-// GetLen returns the length of the first sequence.
-// If we are reading a multiple sequence alignment, this should be the length
-// of all sequences.
-func (seqgrp *SeqGrp) GetLen() int { return len(seqgrp.seqs[0].GetSeq()) }
-
-// GetCounts gives us the normally non-exported counts
-func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d {
-	if seqgrp.counts == nil {
-		seqgrp.UsageSite()
-	}
-	return seqgrp.counts
-}
-
-// getSymUsed returns the normally non-exported symUsed
-func (seqgrp *SeqGrp) GetSymUsed() [MaxSym]bool { return seqgrp.symUsed }
-
-func (seqgrp *SeqGrp) TypeKnwn() bool { return seqgrp.typeKnwn }
-
-// GetRevmap returns the non-exported revmap
-func (seqgrp *SeqGrp) GetRevmap() []uint8 {
-	return seqgrp.revmap
-}
-
-// GetMapping returns the mapping (row) for a specific character
-func (seqgrp *SeqGrp) GetMapping(c uint8) uint8 { return seqgrp.mapping[c] }
-
-// Clear gets rid of any calculated quantities. Useful for testing, but
-// rarely for normal use.
-func (seqgrp *SeqGrp) Clear() {
-	for i := range seqgrp.symUsed {
-		seqgrp.symUsed[i] = false
-		seqgrp.mapping[i] = 255 // Any old silly number
-	}
-	seqgrp.revmap = nil
-	seqgrp.counts = nil
-	seqgrp.gapcnt = nil
-	seqgrp.stype = Unknown
-	seqgrp.usedKnwn = false
-	seqgrp.freqKnwn = false
-}
-
-// GetNSeq returns the number of sequences
-func (seqgrp *SeqGrp) GetNSeq() int { return len(seqgrp.seqs) }
-
-// GetNSym returns the number of symbols used in a seqgrp.
-// Used in testing.
-func (seqgrp *SeqGrp) GetNSym() int {
-	if !seqgrp.usedKnwn {
-		seqgrp.UsageSite()
-	}
-	if len(seqgrp.revmap) == 0 {
-		seqgrp.mapsyms()
-	}
-
-	return len(seqgrp.revmap)
-}
-
-// GetSeqSlc return the slice of sequences
-func (seqgrp *SeqGrp) GetSeqSlc() []seq { return seqgrp.seqs }
-
-// GetMap tells us where we are storing info about a symbol in our
-// tallies. So, seq[i].GetMap() tells us where to put info about this
-// character.
-func (seqgrp *SeqGrp) GetMap(c byte) uint8 { return seqgrp.mapping[c] }
 
 // Function GetSeq returns the sequence as the original byte slice
 func (s seq) GetSeq() []byte { return s.seq }
@@ -254,6 +193,91 @@ func (seq seq) Upper() error {
 	return nil
 }
 
+// Copy
+func (s *seq) Copy() (t seq) {
+	t = *new(seq)
+	t.cmmt = s.cmmt
+	t.SetSeq(s.GetSeq())
+	return t
+}
+
+// String returns a sequence, with its comment at the start as
+// a single string
+func (s seq) String() (t string) {
+	if len(s.cmmt) > 0 {
+		t = fmt.Sprintf("%c%s\n", cmmt_char, s.GetCmmt())
+	} else {
+		t = ">\n"
+	}
+	t += string(s.GetSeq())
+	return
+}
+
+// GetLen returns the length of the first sequence.
+// If we are reading a multiple sequence alignment, this should be the length
+// of all sequences.
+func (seqgrp *SeqGrp) GetLen() int { return len(seqgrp.seqs[0].GetSeq()) }
+
+// GetCounts gives us the normally non-exported counts
+func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d {
+	if seqgrp.counts == nil {
+		seqgrp.UsageSite()
+	}
+	return seqgrp.counts
+}
+
+// getSymUsed returns the normally non-exported symUsed
+func (seqgrp *SeqGrp) GetSymUsed() [MaxSym]bool { return seqgrp.symUsed }
+
+func (seqgrp *SeqGrp) TypeKnwn() bool { return seqgrp.typeKnwn }
+
+// GetRevmap returns the non-exported revmap
+func (seqgrp *SeqGrp) GetRevmap() []uint8 {
+	return seqgrp.revmap
+}
+
+// GetMapping returns the mapping (row) for a specific character
+func (seqgrp *SeqGrp) GetMapping(c uint8) uint8 { return seqgrp.mapping[c] }
+
+// Clear gets rid of any calculated quantities. Useful for testing, but
+// rarely for normal use.
+func (seqgrp *SeqGrp) Clear() {
+	for i := range seqgrp.symUsed {
+		seqgrp.symUsed[i] = false
+		seqgrp.mapping[i] = 255 // Any old silly number
+	}
+	seqgrp.revmap = nil
+	seqgrp.counts = nil
+	seqgrp.gapcnt = nil
+	seqgrp.stype = Unknown
+	seqgrp.usedKnwn = false
+	seqgrp.freqKnwn = false
+}
+
+// GetNSeq returns the number of sequences
+func (seqgrp *SeqGrp) GetNSeq() int { return len(seqgrp.seqs) }
+
+// GetNSym returns the number of symbols used in a seqgrp.
+// Used in testing.
+func (seqgrp *SeqGrp) GetNSym() int {
+	if !seqgrp.usedKnwn {
+		seqgrp.UsageSite()
+	}
+	if len(seqgrp.revmap) == 0 {
+		seqgrp.mapsyms()
+	}
+
+	return len(seqgrp.revmap)
+}
+
+// GetSeqSlc return the slice of sequences
+func (seqgrp *SeqGrp) GetSeqSlc() []seq { return seqgrp.seqs }
+
+// GetMap tells us where we are storing info about a symbol in our
+// tallies. So, seq[i].GetMap() tells us where to put info about this
+// character.
+func (seqgrp *SeqGrp) GetMap(c byte) uint8 { return seqgrp.mapping[c] }
+
 func (seqgrp SeqGrp) Upper() error {
 	for _, ss := range seqgrp.seqs {
 		if err := ss.Upper(); err != nil {
@@ -275,6 +299,8 @@ type myscanner struct {
 	err          error
 }
 
+// newmyscanner ? do we really need this, or can we just put a scanner on the
+// stack in the function that uses it ?
 func newmyscanner(fp io.Reader) *myscanner {
 	r := new(myscanner)
 	r.bufio_reader = bufio.NewReader(fp)
@@ -494,6 +520,8 @@ func ReadSeqs(fname string, seqgrp *SeqGrp,
 // check_seq_lengths should only be called if we are keeping
 // gaps. Then we imagine all the sequences are aligned, so they
 // must be the same length.
+// For consistency, this should be callable on a seqgrp, not
+// a slice of sequences.
 func check_lengths(seq_set []seq) error {
 	msg := `Sequence lengths are not the same. First sequence length %d, but
 sequence %i length: %i. Sequence starts %s"`
@@ -546,6 +574,7 @@ func Readfiles(fname []string, s_opts *Options) (seqgrp SeqGrp, n_dup int, err e
 // What I could change: If we are removing gaps, we make a buffer which grows
 // character by character via WriteByte(). I could make a buffer beforehand
 // and grow as necessary.
+// This should also really act on a seqgrp.
 func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 	const c_per_line = 60
 	var nilstring string
@@ -600,25 +629,6 @@ func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 	return
 }
 
-// Copy
-func (s *seq) Copy() (t seq) {
-	t = *new(seq)
-	t.cmmt = s.cmmt
-	t.SetSeq(s.GetSeq())
-	return t
-}
-
-// String returns a sequence, with its comment at the start as
-// a single string
-func (s seq) String() (t string) {
-	if len(s.cmmt) > 0 {
-		t = fmt.Sprintf("%c%s\n", cmmt_char, s.GetCmmt())
-	} else {
-		t = ">\n"
-	}
-	t += string(s.GetSeq())
-	return
-}
 
 // FindNdx Returns the index of the sequence containing a string.
 // Numbering starts from zero. We remove any ">", space or tab at the start.
