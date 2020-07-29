@@ -1,13 +1,14 @@
 package seq_test
 
 import (
+	"bytes"
 	"fmt"
+	. "github.com/andrew-torda/goutil/seq"
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
-
-	. "github.com/andrew-torda/goutil/seq"
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 	with_spaces
 )
 
-func writeTest_with_spaces(f_tmp *os.File) {
+func writeTest_with_spaces(f_tmp io.Writer) {
 	const b byte = 'B'
 	for i, l := range seq_lengths {
 		ndx := i % len(trickyComments)
@@ -52,7 +53,7 @@ func writeTest_with_spaces(f_tmp *os.File) {
 	}
 }
 
-func writeTest_nospaces(f_tmp *os.File) {
+func writeTest_nospaces(f_tmp io.Writer) {
 	for i := range seq_lengths {
 		fmt.Fprintln(f_tmp, "> seq", i+1, ">>")
 		for j := 0; j < seq_lengths[i]; j++ {
@@ -93,8 +94,8 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 		t.Fatalf("Found %d dups. Expected zero", n_dup)
 	}
 	for i, s := range seqgrp.GetSeqSlc() {
-		if s.Testsize() != seq_lengths[i] {
-			t.Fatalf("Seq length expected %d, got %d", seq_lengths[i], s.Testsize())
+		if s.Len() != seq_lengths[i] {
+			t.Fatalf("Seq length expected %d, got %d", seq_lengths[i], s.Len())
 		}
 	}
 
@@ -263,7 +264,6 @@ func TestEntropy(t *testing.T) {
 	for tnum, x := range entdata {
 		var tmpname string
 		var err error
-		var entrpy []float32
 		var seqgrp SeqGrp
 		if tmpname, err = wrtTmp(x.s1); err != nil {
 			t.Fatal("tempfile error:", err)
@@ -273,21 +273,18 @@ func TestEntropy(t *testing.T) {
 			t.Fatal("Test: ", tnum, err)
 		}
 		seqgrp.Upper()
-		if entrpy, err = seqgrp.Entropy(true); err != nil {
-			t.Fatal("entropy fail on sequence", tnum)
-		}
+		entrpy := make([]float32, seqgrp.GetLen())
+		seqgrp.Entropy(true, entrpy)
 
 		if !sliceEql(entrpy, x.gapAsChar) {
 			t.Fatal("set ", tnum, "gapaschar wanted\n", x.gapAsChar, "got\n", entrpy)
 		} // now do the negative case
 
 		seqgrp.Clear()
-		if entrpy, err = seqgrp.Entropy(false); err != nil {
-			t.Fatal("entropy fail on sequence", tnum)
-		}
+		seqgrp.Entropy(false, entrpy)
 
 		if !sliceEql(entrpy, x.gapNotChar) {
-			t.Fatal("set ", tnum, "gapnochar wanted\n", x.gapNotChar, "got\n", entrpy)
+			t.Fatal("set ", tnum, "gap nochar wanted\n", x.gapNotChar, "got\n", entrpy)
 		}
 	}
 }
@@ -328,7 +325,7 @@ DEF`
 	}
 }
 
-	// 1, 1/2, 0
+// 1, 1/2, 0
 var ufset1 string = `> reference sequence
 ABC
 >   some stuff here for seq1
@@ -336,7 +333,7 @@ ABD
 > more here in seq2
 AFE`
 
-	// now 0, 0, 1, 1, 1, 1, 0
+// now 0, 0, 1, 1, 1, 1, 0
 var ufset2 = `> reference sequence
 X-BAA A-JKL
 > s2
@@ -381,4 +378,151 @@ func TestCompat(t *testing.T) {
 			t.Fatal("Set", i, "expected", exp.v, "got", compat)
 		}
 	}
+}
+
+// getSeqGrpSameLen returns a seqgroup in which all the sequences have the same
+// length
+func getSeqGrpSameLen() SeqGrp {
+	ss := []string{"aaaa", "abcd"}
+	return Str2SeqGrp(ss, "s")
+}
+
+// TestStr2SeqGrp
+func TestStr2SeqGrp(t *testing.T) {
+	ss := []string{"aa", "bb", "cc"}
+	seqgrp := Str2SeqGrp(ss, "s")
+	if i := seqgrp.GetNSeq(); i != 3 {
+		t.Fatalf("Wrong num seqs, want 3, got %d", i)
+	}
+	if i := len(seqgrp.GetSeqSlc()[0].GetSeq()); i != 2 {
+		t.Fatalf("Wrong seq len, want 2, got %d", i)
+	}
+}
+
+// TestGetCounts
+func TestGetCounts(t *testing.T) {
+	seqgrp := Str2SeqGrp([]string{"aa", "bb", "cc"}, "s")
+	b := seqgrp.GetCounts().Mat
+	const blen = 3
+	const b0len = 2
+	if len(b) != blen {
+		t.Fatalf("len b want %d  got %d", blen, len(b))
+	}
+	if len(b[0]) != b0len {
+		t.Fatalf("len b[0] want %d got %d", b0len, len(b[0]))
+	}
+}
+
+// TestTypeKnwn
+func TestTypeKnwn(t *testing.T) {
+	seqgrp := Str2SeqGrp([]string{"aa", "bb", "cc"}, "s")
+	if seqgrp.TypeKnwn() == true {
+		t.Fatal("typeknown should not know what type we are")
+	}
+}
+
+// TestGetRevmap
+func TestGetRevmap(t *testing.T) {
+	seqgrp := Str2SeqGrp([]string{"aa", "bb", "cc"}, "s")
+	if len(seqgrp.GetRevmap()) != 0 {
+		t.Fatal("Should not have a revmap yet")
+	}
+	seqgrp.UsageSite()
+	a := seqgrp.GetRevmap()
+	if len(a) != 3 {
+		t.Fatal("broken length of \"a\"")
+	}
+	if a[0] != 'a' {
+		t.Fatal("did not find \"a\" in first place in revmap")
+	}
+}
+
+// TestGetSymUsed
+func TestGetSymUsed(t *testing.T) {
+	nothing := func(x bool) bool { return x }
+	seqgrp := Str2SeqGrp([]string{"aa", "bb", "cc"}, "s")
+	a := seqgrp.GetSymUsed()
+	_ = nothing(a[MaxSym-1])
+}
+
+// TestGetNSeq
+func TestGetNSeq(t *testing.T) {
+	testdat := []struct {
+		ss   []string
+		nsym int
+		tt   []string
+		ncmb int
+	}{
+		{[]string{"a", "a"}, 1, []string{"a", "a"}, 1},
+		{[]string{"ab", "ab"}, 2, []string{"cd", "ce"}, 5},
+		{[]string{"abc", "def", "abc"}, 6, []string{"abcdefg"}, 7},
+	}
+
+	for _, a := range testdat {
+		seqgrp := Str2SeqGrp(a.ss)
+		nsym := seqgrp.GetNSym()
+		if nsym != a.nsym {
+			t.Fatalf("Wrong nsym. Wanted %d, got %d", a.nsym, nsym)
+		}
+	}
+	for _, a := range testdat {
+		seqgrp1 := Str2SeqGrp(a.ss)
+		seqgrp2 := Str2SeqGrp(a.tt)
+		symSync := SymSync{UChan: make(chan [MaxSym]bool)}
+		go seqgrp1.SetSymUsed(&symSync)
+
+		seqgrp2.SetSymUsed(&symSync)
+		if seqgrp1.GetNSym() != seqgrp2.GetNSym() {
+			t.Fatalf("nsym mismatch %d vs %d", seqgrp1.GetNSym(), seqgrp2.GetNSym())
+		}
+		if n := seqgrp1.GetNSym(); n != a.ncmb {
+			t.Fatalf("combined nsyms, wanted %d got %d", a.ncmb, n)
+		}
+	}
+}
+
+// TestSeqInfo tests some seq manipulation functions
+func TestSeqInfo(t *testing.T) {
+	ss := []string{"aa", "bb", "cc"}
+	const sometext = "sometext is here"
+	seqgrp := Str2SeqGrp(ss, sometext)
+	slc := seqgrp.GetSeqSlc()
+
+	a0 := &(seqgrp.GetSeqSlc()[0])
+	a1 := &(seqgrp.GetSeqSlc()[1])
+
+	c := a0.GetCmmt()
+	if strings.Contains(c, sometext) == false {
+		t.Fatal("did not find: " + sometext + " got " + c)
+	}
+	c = a0.String()
+	if strings.Contains(c, sometext) == false {
+		t.Fatal("in whole seq did not find:" + sometext)
+	}
+	if strings.Contains(c, "aa") == false {
+		t.Fatal("in whole seq did not find \"aa\"")
+	}
+
+	a0.Upper()
+	g := a0.GetSeq()
+	if bytes.Contains(g, []byte("AA")) == false {
+		t.Fatal("did not uppercase sequence")
+	}
+	a0.Lower()
+	g = a0.GetSeq()
+	if bytes.Contains(g, []byte("aa")) == false {
+		t.Fatal("did not lowercase sequence")
+	}
+	const aaaaaaaa = "aaaaaaaa"
+	const bbbbbbbb = "bbbbbbbb"
+	a0.SetSeq([]byte(aaaaaaaa))
+	a1.SetSeq([]byte(bbbbbbbb))
+	// Now go back to the slice and check if the values are there
+	if bytes.Contains(seqgrp.GetSeqSlc()[0].GetSeq(), []byte(aaaaaaaa)) == false {
+		t.Fatal("Did not change sequence aaaa properly")
+	}
+	if bytes.Contains(seqgrp.GetSeqSlc()[1].GetSeq(), []byte(bbbbbbbb)) == false {
+		t.Fatal("Did not change sequence bbbbb properly")
+	}
+
 }
