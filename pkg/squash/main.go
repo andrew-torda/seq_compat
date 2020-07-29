@@ -53,7 +53,7 @@ func MyMain(seqstring, infile, outfile string) int {
 		seqgrp.GetSeqSlc()[i].SetSeq(b) // do not use "ss" here
 	}
 
-	if err := seq.Write_to_f(outfile, seqgrp.GetSeqSlc(), s_opts); err != nil {
+	if err := seq.WriteToF(outfile, seqgrp.GetSeqSlc(), s_opts); err != nil {
 		if outfile == "" {
 			outfile = "os.Stdout"
 		}
