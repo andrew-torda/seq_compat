@@ -32,6 +32,8 @@ const (
 	with_spaces
 )
 
+// writeTest_with_spaces provides some sequences with different patterns of
+// white space and some gap characters mixed in. It sticks it in an io.Writer.
 func writeTest_with_spaces(f_tmp io.Writer) {
 	const b byte = 'B'
 	for i, l := range seq_lengths {
@@ -53,16 +55,20 @@ func writeTest_with_spaces(f_tmp io.Writer) {
 	}
 }
 
+// writeTest_nospaces puts some sequences into an io.Writer, but with no spaces
+// so as to check if we correctly handle long lines. 
 func writeTest_nospaces(f_tmp io.Writer) {
-	for i := range seq_lengths {
+	for _, i := range seq_lengths {
 		fmt.Fprintln(f_tmp, "> seq", i+1, ">>")
-		for j := 0; j < seq_lengths[i]; j++ {
+		for j := 0; j < i; j++ {
 			fmt.Fprintf(f_tmp, "%c", 'A')
 		}
 		fmt.Fprintf(f_tmp, "\n")
 	}
 }
 
+// innerWriteReadSeqs writes and then reads a sequence. It should be called
+// once with spaces and once without.
 func innerWriteReadSeqs(t *testing.T, spaces int) {
 	f_tmp, err := ioutil.TempFile("", "_del_me_testing")
 	if err != nil {
@@ -80,8 +86,8 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 		Vbsty: 0, Keep_gaps_rd: false,
 		Dry_run:      true,
 		Rmv_gaps_wrt: true}
-	var names = []string{f_tmp.Name()}
-	seqgrp, n_dup, err := Readfiles(names, s_opts)
+
+	seqgrp, n_dup, err := Readfile(f_tmp.Name(), s_opts)
 	if err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
@@ -98,7 +104,6 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 			t.Fatalf("Seq length expected %d, got %d", seq_lengths[i], s.Len())
 		}
 	}
-
 }
 
 // Check that broken files are gracefully handled
@@ -127,6 +132,8 @@ func TestEmpty(t *testing.T) {
 
 }
 
+// TestReadSeqs writes and then reads sequences, and does it once to check that
+// we hop over white space and once to make sure we handle long lines.
 func TestReadSeqs(t *testing.T) {
 	innerWriteReadSeqs(t, no_spaces)
 	innerWriteReadSeqs(t, with_spaces)
@@ -153,6 +160,7 @@ var stypedata = []struct {
 	{"> s1\njb\n>s2\nO", Unknown},
 }
 
+// TestTypes checks the code for recognising RNA/DNA/Protein/whatever types.
 func TestTypes(t *testing.T) {
 	var s_opts = &Options{
 		Vbsty: 0, Keep_gaps_rd: false,
@@ -175,7 +183,8 @@ func TestTypes(t *testing.T) {
 		seqgrp.Upper()
 		st := seqgrp.GetType()
 		if st != x.stype {
-			t.Fatalf("seq num %d (from 0) got %d expected %d", tnum, st, x.stype)
+			const msg = "seq num %d (numbering from 0) got type %d expected %d"
+			t.Fatalf(msg, tnum, st, x.stype)
 		}
 	}
 }
@@ -255,6 +264,7 @@ func wrtTmp(s string) (string, error) {
 	return name, nil
 }
 
+// TestEntropy checks the entropy calculation.
 func TestEntropy(t *testing.T) {
 	s_opts := &Options{
 		Vbsty: 0, Keep_gaps_rd: true,
@@ -264,7 +274,8 @@ func TestEntropy(t *testing.T) {
 	for tnum, x := range entdata {
 		var tmpname string
 		var err error
-		var seqgrp SeqGrp
+		var seqgrp *SeqGrp
+
 		if tmpname, err = wrtTmp(x.s1); err != nil {
 			t.Fatal("tempfile error:", err)
 		}
@@ -275,16 +286,16 @@ func TestEntropy(t *testing.T) {
 		seqgrp.Upper()
 		entrpy := make([]float32, seqgrp.GetLen())
 		seqgrp.Entropy(true, entrpy)
-
+		const emsg = "set %d %s wanted\n %f got %f\n"
 		if !sliceEql(entrpy, x.gapAsChar) {
-			t.Fatal("set ", tnum, "gapaschar wanted\n", x.gapAsChar, "got\n", entrpy)
+			t.Fatalf(emsg, tnum, "gap as char", x.gapAsChar, entrpy)
 		} // now do the negative case
 
 		seqgrp.Clear()
 		seqgrp.Entropy(false, entrpy)
 
 		if !sliceEql(entrpy, x.gapNotChar) {
-			t.Fatal("set ", tnum, "gap nochar wanted\n", x.gapNotChar, "got\n", entrpy)
+			t.Fatalf(emsg, tnum, "gap nochar", x.gapAsChar, entrpy)
 		}
 	}
 }
@@ -303,7 +314,7 @@ DEF`
 		Rmv_gaps_wrt: false}
 	var tmpname string
 	var err error
-	var seqgrp SeqGrp
+	var seqgrp *SeqGrp
 	if tmpname, err = wrtTmp(set1); err != nil {
 		t.Fatal("tempfile error:", err)
 	}
@@ -357,7 +368,7 @@ func TestCompat(t *testing.T) {
 		Rmv_gaps_wrt: false}
 	var tmpname string
 	var err error
-	var seqgrp SeqGrp
+	var seqgrp *SeqGrp
 	for i, exp := range expected {
 		if tmpname, err = wrtTmp(exp.s); err != nil {
 			t.Fatal("tempfile error:", err)
@@ -486,7 +497,6 @@ func TestSeqInfo(t *testing.T) {
 	ss := []string{"aa", "bb", "cc"}
 	const sometext = "sometext is here"
 	seqgrp := Str2SeqGrp(ss, sometext)
-	slc := seqgrp.GetSeqSlc()
 
 	a0 := &(seqgrp.GetSeqSlc()[0])
 	a1 := &(seqgrp.GetSeqSlc()[1])
@@ -524,5 +534,4 @@ func TestSeqInfo(t *testing.T) {
 	if bytes.Contains(seqgrp.GetSeqSlc()[1].GetSeq(), []byte(bbbbbbbb)) == false {
 		t.Fatal("Did not change sequence bbbbb properly")
 	}
-
 }
