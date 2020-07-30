@@ -56,7 +56,7 @@ func writeTest_with_spaces(f_tmp io.Writer) {
 }
 
 // writeTest_nospaces puts some sequences into an io.Writer, but with no spaces
-// so as to check if we correctly handle long lines. 
+// so as to check if we correctly handle long lines.
 func writeTest_nospaces(f_tmp io.Writer) {
 	for _, i := range seq_lengths {
 		fmt.Fprintln(f_tmp, "> seq", i+1, ">>")
@@ -78,7 +78,7 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 	case with_spaces:
 		writeTest_with_spaces(&b)
 	}
-	reader := strings.NewReader (b.String())
+	reader := strings.NewReader(b.String())
 
 	s_opts := &Options{
 		Vbsty: 0, Keep_gaps_rd: false,
@@ -171,7 +171,7 @@ func TestTypes(t *testing.T) {
 	for tnum, x := range stypedata {
 		var seqgrp SeqGrp
 		if _, err := ReadSeqs(strings.NewReader(x.s1), &seqgrp, s_opts); err != nil {
-			t.Fatal (err)
+			t.Fatal("TestTypes broke on ReadSeqs", err)
 		}
 		seqgrp.Upper()
 		st := seqgrp.GetType()
@@ -266,7 +266,7 @@ func TestEntropy(t *testing.T) {
 
 	for tnum, x := range entdata {
 		var seqgrp SeqGrp
-		rdr := strings.NewReader (x.s1)
+		rdr := strings.NewReader(x.s1)
 		if _, err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
 			t.Fatal("Test: ", tnum, err)
 		}
@@ -299,14 +299,11 @@ DEF`
 		Vbsty: 0, Keep_gaps_rd: true,
 		Dry_run:      true,
 		Rmv_gaps_wrt: false}
-	var tmpname string
-	var err error
-	var seqgrp *SeqGrp
-	if tmpname, err = wrtTmp(set1); err != nil {
-		t.Fatal("tempfile error:", err)
-	}
-	defer os.Remove(tmpname)
-	if seqgrp, _, err = Readfile(tmpname, s_opts); err != nil {
+
+	var seqgrp SeqGrp
+
+	rdr := strings.NewReader(set1)
+	if _, err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
 		t.Fatalf("Reading temp sequences %v", err)
 	}
 	subs := []string{"> some", " some", "some", "seq1"}
