@@ -60,10 +60,10 @@ func (seqgrp *SeqGrp) SetSymUsed(symSync ...*SymSync) {
 // GetType looks at a set of sequences and returns its best guess
 // as to the type of file.
 func (seqgrp *SeqGrp) GetType() SeqType {
-	if seqgrp.stype != Unknown { // If the sequence type has been
+	if seqgrp.stype != Unchecked { // If the sequence type has been
 		return seqgrp.stype //      set, just return it.
 	}
-	seqgrp.typeKnwn = true // Set here because it will be known by end of func
+
 	if seqgrp.usedKnwn != true {
 		seqgrp.SetSymUsed()
 	}
@@ -240,33 +240,28 @@ func (seqgrp *SeqGrp) GetLogBase(gapsAreChar bool) (nSym int) {
 		case Unknown:
 			nSym = len(seqgrp.revmap)
 		default:
-			panic (progbug)
+			panic(progbug)
 		}
 	}
 	return nSym
 }
 
-// Entropy calculates sequence entropy. It returns the result as a slice
-// of the same length as the sequences. It needs to be told if gaps are
-// characters, or should be ignored.
-// If the sequence is a nucleotide or protein, we know what logarithm to use.
-// If the sequence is unknown, we use the log base the number different
-// symbols
-// The caller allocates space for the result (entropy).
-func (seqgrp *SeqGrp) Entropy(gapsAreChar bool, entropy []float32) (error) {
-	if !seqgrp.freqKnwn {
-		seqgrp.UsageFrac(gapsAreChar)
-	}
+// EntropyFromArray is the inner routine for calculating entropy.
+// It operates on the inner matrix, so it can be called from other routines
+// which do not have the seqgrp, but do have a table of counts.
+func EntropyFromArray(gapsAreChar bool,
+	matrix [][]float32, entropy []float32, logbase int, gapMapping uint8) {
+	logfac := 1.0 / math.Log(float64(logbase)) // to change base of logs
+	nrow := len(matrix)
+	ncol := len(matrix[0])
 
-	nSym := seqgrp.GetLogBase(gapsAreChar)
-	logfac := 1.0 / math.Log(float64(nSym))
+	//	nrow, ncol := seqgrp.counts.Size()
 
-	nrow, ncol := seqgrp.counts.Size()
 	if gapsAreChar { //                         Gaps are just a character, so
 		for icol := 0; icol < ncol; icol++ { // no need for special treatment
 			total := 0.0
 			for irow := 0; irow < nrow; irow++ {
-				f := float64(seqgrp.counts.Mat[irow][icol])
+				f := float64(matrix[irow][icol])
 				if f == 0.0 {
 					continue
 				}
@@ -276,25 +271,40 @@ func (seqgrp *SeqGrp) Entropy(gapsAreChar bool, entropy []float32) (error) {
 			entropy[icol] = float32(math.Abs(total))
 		}
 	} else { // we have to check and ignore gap characters
-		iBadRow := int(seqgrp.mapping['-'])
+		iBadRow := int(gapMapping)
 		for icol := 0; icol < ncol; icol++ {
 			total := 0.0
 			for irow := 0; irow < nrow; irow++ {
 				if irow == iBadRow {
 					continue
 				}
-				f := float64(seqgrp.counts.Mat[irow][icol])
+				f := float64(matrix[irow][icol])
 				if f == 0.0 {
 					continue
 				}
 				logf := math.Log(f) * logfac
 				total += f * logf
 			}
-			entropy[icol] = float32(math.Abs(total))
+			entropy[icol] = -float32(total)
 		}
 
 	}
-	return nil
+}
+
+// Entropy calculates sequence entropy. It returns the result as a slice
+// of the same length as the sequences. It needs to be told if gaps are
+// characters, or should be ignored.
+// If the sequence is a nucleotide or protein, we know what logarithm to use.
+// If the sequence is unknown, we use the log base the number different
+// symbols
+// The caller allocates space for the result (entropy).
+func (seqgrp *SeqGrp) Entropy(gapsAreChar bool, entropy []float32) {
+	if !seqgrp.freqKnwn {
+		seqgrp.UsageFrac(gapsAreChar)
+	}
+	logbase := seqgrp.GetLogBase(gapsAreChar)
+	gapMapping := seqgrp.GetMapping(GapChar)
+	EntropyFromArray(gapsAreChar, seqgrp.counts.Mat, entropy, logbase, gapMapping)
 }
 
 // Compat takes one sequence (a reference). It returns the frequency of each
