@@ -70,27 +70,27 @@ func writeTest_nospaces(f_tmp io.Writer) {
 // innerWriteReadSeqs writes and then reads a sequence. It should be called
 // once with spaces and once without.
 func innerWriteReadSeqs(t *testing.T, spaces int) {
-	f_tmp, err := ioutil.TempFile("", "_del_me_testing")
-	if err != nil {
-		t.Fatal("tempfile", f_tmp, err)
-	}
-	defer f_tmp.Close()
+	var b strings.Builder
+
 	switch spaces {
 	case no_spaces:
-		writeTest_nospaces(f_tmp)
+		writeTest_nospaces(&b)
 	case with_spaces:
-		writeTest_with_spaces(f_tmp)
+		writeTest_with_spaces(&b)
 	}
-	defer os.Remove(f_tmp.Name())
+	reader := strings.NewReader (b.String())
+
 	s_opts := &Options{
 		Vbsty: 0, Keep_gaps_rd: false,
 		Dry_run:      true,
 		Rmv_gaps_wrt: true}
 
-	seqgrp, n_dup, err := Readfile(f_tmp.Name(), s_opts)
+	var seqgrp SeqGrp
+	n_dup, err := ReadSeqs(reader, &seqgrp, s_opts)
 	if err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
+
 	if seqgrp.GetNSeq() != len(seq_lengths) {
 		t.Fatalf("Wrote %d seqs, but read only %d.\n%s, %d",
 			len(seq_lengths), seqgrp.GetNSeq(),
@@ -169,17 +169,10 @@ func TestTypes(t *testing.T) {
 	}
 
 	for tnum, x := range stypedata {
-		f_tmp, err := ioutil.TempFile("", "_del_me_testing")
-		if err != nil {
-			t.Fatal("tempfile", f_tmp, err)
+		var seqgrp SeqGrp
+		if _, err := ReadSeqs(strings.NewReader(x.s1), &seqgrp, s_opts); err != nil {
+			t.Fatal (err)
 		}
-		defer os.Remove(f_tmp.Name())
-
-		if _, err := io.WriteString(f_tmp, x.s1); err != nil {
-			t.Fatal("writing string to temp file")
-		}
-		f_tmp.Close()
-		seqgrp, _, err := Readfile(f_tmp.Name(), s_opts)
 		seqgrp.Upper()
 		st := seqgrp.GetType()
 		if st != x.stype {
@@ -272,15 +265,9 @@ func TestEntropy(t *testing.T) {
 		Rmv_gaps_wrt: false}
 
 	for tnum, x := range entdata {
-		var tmpname string
-		var err error
-		var seqgrp *SeqGrp
-
-		if tmpname, err = wrtTmp(x.s1); err != nil {
-			t.Fatal("tempfile error:", err)
-		}
-		defer os.Remove(tmpname)
-		if seqgrp, _, err = Readfile(tmpname, s_opts); err != nil {
+		var seqgrp SeqGrp
+		rdr := strings.NewReader (x.s1)
+		if _, err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
 			t.Fatal("Test: ", tnum, err)
 		}
 		seqgrp.Upper()
