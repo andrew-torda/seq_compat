@@ -38,11 +38,12 @@ type seq struct {
 type SeqType byte
 
 const (
-	Unknown SeqType = iota
-	Protein
-	DNA
-	RNA
-	Ntide
+	Unchecked SeqType = iota // Has not been looked at yet
+	Unknown                  // Really unknown, not a protein or nucleotide
+	Protein                  //
+	DNA                      //
+	RNA                      //
+	Ntide                    // Nucleotide
 )
 
 // We only read ascii characters, so anything bigger than this is not
@@ -75,9 +76,8 @@ type SeqGrp struct {
 	stype    SeqType
 	usedKnwn bool // Do we know how many symbols are used ?
 	freqKnwn bool // are counts of symbols converted to fractional probabilities ?
-	typeKnwn bool // Have we called the function to work out our type dna/prot ?
+	//	typeKnwn bool // Have we called the function to work out our type dna/prot ?
 }
-
 
 // Function GetSeq returns the sequence as the original byte slice
 func (s seq) GetSeq() []byte { return s.seq }
@@ -85,19 +85,11 @@ func (s seq) GetSeq() []byte { return s.seq }
 // Function GetCmmt returns the comment, including the leading ">"
 func (s seq) GetCmmt() string { return s.cmmt }
 
-// Size returns the size of a sequence
-func (s seq) size() int {
-	return len(s.seq)
-}
-
-func (s seq) Testsize() int {
-	return len(s.seq)
-}
+// Function Len
+func (s seq) Len() int { return len(s.seq) }
 
 // SetSeq will replace whatever was the sequence with a new one
-func (s *seq) SetSeq(t []byte) {
-	s.seq = t
-}
+func (s *seq) SetSeq(t []byte) { s.seq = t }
 
 // Clear gets rid of the contents of a sequence. If you want
 // to delete a sequence, but it is part of an array, you can just
@@ -148,8 +140,8 @@ func (s seq) Species() (species string, ok bool) {
 // Lower will change a sequence to lower case
 // It is much smaller than the library version, since it only knows
 // about characters that can occur in biological sequences.
-// It also acts in place
-func (s seq) Lower() {
+// It also acts in place.
+func (s *seq) Lower() {
 	low := [256]byte{
 		'A': 'a', 'B': 'b', 'C': 'c', 'D': 'd', 'E': 'e', 'F': 'f', 'G': 'g', 'H': 'h',
 		'I': 'i', 'J': 'j', 'K': 'k', 'L': 'l', 'M': 'm', 'N': 'n', 'O': 'o', 'P': 'p',
@@ -174,7 +166,7 @@ func trimStr(s string, n int) string {
 // It only works with bytes, not runes.
 // It can return an error if it encounters a symbol it does
 // not like (value higher than 128).
-func (seq seq) Upper() error {
+func (seq *seq) Upper() error {
 	const diff = 'a' - 'A'
 	const symerr = "bad sym \"%c\" at position %d starting \"%s\""
 	s := seq.GetSeq()
@@ -226,22 +218,26 @@ func (seqgrp *SeqGrp) GetCounts() *matrix.FMatrix2d {
 	return seqgrp.counts
 }
 
-// getSymUsed returns the normally non-exported symUsed
+// GetSymUsed returns the normally non-exported symUsed
 func (seqgrp *SeqGrp) GetSymUsed() [MaxSym]bool { return seqgrp.symUsed }
 
-func (seqgrp *SeqGrp) TypeKnwn() bool { return seqgrp.typeKnwn }
+// TypeKnwn tells us if we have decided what kind of sequence we have.
+func (seqgrp *SeqGrp) TypeKnwn() bool {
+	if seqgrp.stype == Unchecked {
+		return false
+	}
+	return true
+}
 
 // GetRevmap returns the non-exported revmap
-func (seqgrp *SeqGrp) GetRevmap() []uint8 {
-	return seqgrp.revmap
-}
+func (seqgrp *SeqGrp) GetRevmap() []uint8 { return seqgrp.revmap }
 
 // GetMapping returns the mapping (row) for a specific character
 func (seqgrp *SeqGrp) GetMapping(c uint8) uint8 { return seqgrp.mapping[c] }
 
-// Clear gets rid of any calculated quantities. Useful for testing, but
-// rarely for normal use.
-func (seqgrp *SeqGrp) Clear() {
+// clear gets rid of some calculated quantities. Useful for testing, but
+// rarely for normal use. It is only exported in testing.
+func (seqgrp *SeqGrp) clear() {
 	for i := range seqgrp.symUsed {
 		seqgrp.symUsed[i] = false
 		seqgrp.mapping[i] = 255 // Any old silly number
@@ -249,7 +245,7 @@ func (seqgrp *SeqGrp) Clear() {
 	seqgrp.revmap = nil
 	seqgrp.counts = nil
 	seqgrp.gapcnt = nil
-	seqgrp.stype = Unknown
+	seqgrp.stype = Unchecked
 	seqgrp.usedKnwn = false
 	seqgrp.freqKnwn = false
 }
@@ -628,7 +624,6 @@ func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 	}
 	return
 }
-
 
 // FindNdx Returns the index of the sequence containing a string.
 // Numbering starts from zero. We remove any ">", space or tab at the start.
