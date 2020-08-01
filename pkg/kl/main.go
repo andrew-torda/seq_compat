@@ -40,12 +40,6 @@ func (seqx *SeqX) GetLen() int { return seqx.len }
 // during testing.
 func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	var err error
-	//	seqX.entropy = make([]float32, seqgrp.GetLen())
-	//	err = seqgrp.Entropy(flags.GapsAreChar, seqX.entropy)
-
-	if err != nil {
-		return err
-	}
 	var gapsAreChars = false
 
 	logbase := seqgrp.GetLogBase(gapsAreChars)
@@ -62,12 +56,12 @@ func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	return nil
 }
 
-// getent gets the entropy in a file. It will be called once for each of
-// the two files.
-// The goroutine runs for each of the two files at the same time. The
-// background process gets a wait group, so we can signal that he is finished.
+// getseqX goes to a file name, extracts the information we want to keep, rather
+// than storing the full sequences. It will be called on each input file,
+// in parallel. The first call is running in the background, so if he gets a
+// non-zero waitgroup, he knows to call wg.Done().
 // The foreground process gets a nil pointer.
-func getent(flags *CmdFlag, infile string, seqX *SeqX, err *error,
+func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 	wg *sync.WaitGroup, symSync *seq.SymSync) {
 	bailout := func() {
 		var junk [seq.MaxSym]bool
@@ -109,8 +103,8 @@ func readtwofiles(flags *CmdFlag, file1, file2 string,
 	var once sync.Once
 	symSync := seq.SymSync{Once: once, UChan: make(chan [seq.MaxSym]bool)}
 	wg.Add(1)
-	go getent(flags, file1, seqXP, &err1, &wg, &symSync)
-	getent(flags, file2, seqXQ, &err2, nil, &symSync)
+	go getseqX(flags, file1, seqXP, &err1, &wg, &symSync)
+	getseqX(flags, file2, seqXQ, &err2, nil, &symSync)
 	wg.Wait()
 	if err1 != nil {
 		return err1
@@ -121,21 +115,20 @@ func readtwofiles(flags *CmdFlag, file1, file2 string,
 	return nil
 }
 
-// kl calculates the kullbach-leibler distance
-// When one of the distributions goes to zero, divergence goes to
-// infinity. Use a pseudo-count philosophy.
-// We have N sequences for distribution q. We say the frequency is less
-// than 1/ N. We say the frequency is 1 / (N + 1).
-// remove ent_p from this structure after debugging.
-type KL_in struct {
-	//	ent_p    []float32   // entropy for p distribution
+// kl_in just tames the set of arguments we will need for the kl function.
+type klIn struct {
 	counts_p [][]float32 // counts/frequencies for p distribution
 	counts_q [][]float32 // " "        "   "    "  q distribution
 	num_q    int         // number of sequences in q distribution
 	logbase  int         // base to use for logarithms
 }
 
-func kl(kl_in *KL_in, kl []float32) {
+// kl calculates the kullbach-leibler distance
+// When one of the distributions goes to zero, divergence goes to
+// infinity. Use a pseudo-count philosophy.
+// We have N sequences for distribution q. We say the frequency is less
+// than 1/ N. We say the frequency is 1 / (N + 1).
+func kl(kl_in *klIn, kl []float32) {
 	logbase := math.Log(float64(kl_in.logbase))
 	logb := func(x float64) float32 { // return logarithm base logbase
 		return float32(math.Log(float64(x)) / logbase)
@@ -150,8 +143,8 @@ func kl(kl_in *KL_in, kl []float32) {
 			if pcount == 0 {
 				continue
 			}
-			qcount := float64(kl_in.counts_q[irow][icol]) // qcount is wrong
-			if qcount == 0 {                              // seems to be five. has it not been normalisedo
+			qcount := float64(kl_in.counts_q[irow][icol])
+			if qcount == 0 {
 				qcount = one_num_q // epsilon/pseudo-counts
 			}
 			tmp := logb(pcount / qcount)
@@ -207,7 +200,7 @@ func calcCosSim(counts_p [][]float32, counts_q [][]float32, cosSim []float32) {
 // the arguments reversed.
 func klFromSeqX(seqXP, seqXQ *SeqX, klP []float32, wg *sync.WaitGroup) {
 	defer wg.Done()
-	klIn := KL_in{
+	klIn := klIn{
 		counts_p: seqXP.counts.Mat,
 		counts_q: seqXQ.counts.Mat,
 		num_q:    seqXQ.nseq,
@@ -280,6 +273,6 @@ func Mymain(flags *CmdFlag, fileP, fileQ, outfile string) (err error) {
 	}
 
 	klP, klQ, entropyP, entropyQ, cosSim := calcInner(seqXP, seqXQ)
-	print (klP, klQ, entropyP, entropyQ, cosSim)
+	print(klP, klQ, entropyP, entropyQ, cosSim)
 	return nil
 }
