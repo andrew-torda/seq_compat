@@ -13,7 +13,7 @@ import (
 )
 
 // get_alfbt returns a pointer to the appropriate alphabet
-func get_alfbt(typ seq.Seq_type) (alfbt []byte) {
+func get_alfbt(typ seq.SeqType) (alfbt []byte) {
 	var dna_alfbt = []byte{'A', 'C', 'G', 'T'}
 	var protein_alfbt = []byte{'a', 'c', 'd', 'e', 'f', 'g',
 		'h', 'i', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'y'}
@@ -30,7 +30,7 @@ func get_alfbt(typ seq.Seq_type) (alfbt []byte) {
 // randseq does not work with a sequence Seq. It works with a slice of
 // bytes. We do use some definitions from the seq package, mainly
 // to decide on how big the alphabet is.
-func New(typ seq.Seq_type, n int) (s []byte) {
+func New(typ seq.SeqType, n int) (s []byte) {
 	alfbt := get_alfbt(typ)
 	t := make([]byte, n)
 	for i := range t {
@@ -45,7 +45,7 @@ func New(typ seq.Seq_type, n int) (s []byte) {
 // The change happens in place, so you probably want to
 // act on a copy.
 // Return the number of positions that were actually changed.
-func Mutate(typ seq.Seq_type, rate float32, s []byte) (n int) {
+func Mutate(typ seq.SeqType, rate float32, s []byte) (n int) {
 	alfbt := get_alfbt(typ)
 	for i, c_old := range s {
 		if rand.Float32() < rate {
@@ -132,7 +132,7 @@ func insertOne (pos int, s []byte, b byte) []byte {
 }
 
 // InsN inserts n random characters
-func InsN (typ seq.Seq_type, n_to_ins int, s[]byte) []byte {
+func InsN (typ seq.SeqType, n_to_ins int, s[]byte) []byte {
 	alfbt := get_alfbt(typ)
 	for i := 0; i < n_to_ins; i++ {
 		b := alfbt[rand.Intn(len(alfbt))]
