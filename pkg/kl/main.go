@@ -91,7 +91,7 @@ func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 	seqgrp.Upper()
 
 	seqgrp.SetSymUsed(symSync)
-	*err = getSeqX(&seqgrp, seqX, flags)
+	*err = getSeqX(seqgrp, seqX, flags)
 }
 
 // readtwofiles reads the two input sequence files. One of them will
