@@ -3,8 +3,9 @@
 *.dll
 *.so
 *.dylib
-
+TAGS
 *~
+foo.*
 
 # Test binary, built with `go test -c`
 *.test
@@ -18,3 +19,5 @@ vendor/
 # binaries
 cmd/entropy/entropy
 cmd/squash/squash
+cmd/kl/kl
+cmd/randseq/randseq
