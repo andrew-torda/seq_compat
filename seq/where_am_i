@@ -1,8 +1,0 @@
-
-/*
-func where_am_i() string {
-	_, file, line, _ := runtime.Caller(0)
-	s := fmt.Sprintf("%v:%v", file, line)
-	return s
-}
-*/
