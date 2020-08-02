@@ -429,8 +429,8 @@ func lump_split(b []byte, white []bool, scnr *myscanner) (seq seq, err error) {
 // The function will stop reading if it encounters an error.
 // If no filename is given, try reading from standard input.
 
-func ReadSeqs(fp io.Reader, seqgrp *SeqGrp,
-	seq_map map[string]int, s_opts *Options) (n_dup int, err error) {
+func ReadSeqs(fp io.Reader, seqgrp *SeqGrp, s_opts *Options) (n_dup int, err error) {
+	seq_map := make(map[string]int)
 	s := newmyscanner(fp)
 	{ //                 Our scanner eats '>' characters, but our
 		var btmp byte // first line has not been through scanner,
@@ -503,6 +503,7 @@ func ReadSeqs(fp io.Reader, seqgrp *SeqGrp,
 	return
 }
 func breaker() {}
+
 // check_seq_lengths should only be called if we are keeping
 // gaps. Then we imagine all the sequences are aligned, so they
 // must be the same length.
@@ -527,7 +528,7 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, int, error) {
 	var seqgrp SeqGrp
 	var err error
 	var n_dup int
-	seq_map := make(map[string]int)
+
 	var fp io.ReadCloser // don't use a file. It could be stdin.
 
 	if fname != "" {
@@ -540,7 +541,7 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, int, error) {
 
 	defer fp.Close()
 
-	if n_dup, err := ReadSeqs(fp, &seqgrp, seq_map, s_opts); err != nil {
+	if n_dup, err := ReadSeqs(fp, &seqgrp, s_opts); err != nil {
 		return &seqgrp, n_dup, err
 	}
 
