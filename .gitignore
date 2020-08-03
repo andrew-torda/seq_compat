@@ -1,5 +1,6 @@
 # Binaries for programs and plugins
 *.exe
+<<<<<<< HEAD
 *.dll
 *.so
 *.dylib
@@ -14,10 +15,11 @@ foo.*
 *.out
 
 # Dependency directories (remove the comment below to include it)
-vendor/
 
 # binaries
 cmd/entropy/entropy
 cmd/squash/squash
 cmd/kl/kl
 cmd/randseq/randseq
+
+
