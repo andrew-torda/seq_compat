@@ -1,0 +1,7 @@
+* Fun efficient reading
+Open a file with mmap.
+Search for every ">" character.
+Use this as an estimate of the number of sequences (nseq)
+Get the length of the first sequence (n_len)
+allocate [nseq][n_len] bytes.
+Use the 
