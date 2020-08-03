@@ -3,12 +3,13 @@ package seq_test
 import (
 	"bytes"
 	"fmt"
-	. "github.com/andrew-torda/goutil/seq"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
+
+	. "github.com/andrew-torda/seq_compat/pkg/seq"
 )
 
 const (

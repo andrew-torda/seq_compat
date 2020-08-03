@@ -9,7 +9,7 @@ import (
 	"math"
 	"sync"
 
-	. "github.com/andrew-torda/goutil/seq/common"
+	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 	"github.com/andrew-torda/matrix"
 )
 

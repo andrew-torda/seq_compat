@@ -7,7 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"sync"
-	//	"github.com/andrew-torda/goutil/seq"
+	//	"github.com/andrew-torda/seq_compat/pkg/seq"
 )
 
 const (

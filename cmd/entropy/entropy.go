@@ -7,7 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	. "github.com/andrew-torda/goutil/seq/common"
+	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 	"github.com/andrew-torda/seq_compat/pkg/entropy"
 	"os"
 	"path"

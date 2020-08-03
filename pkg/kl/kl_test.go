@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/andrew-torda/goutil/seq"
+	"github.com/andrew-torda/seq_compat/pkg/seq"
 	. "github.com/andrew-torda/seq_compat/pkg/kl"
 )
 

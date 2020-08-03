@@ -24,8 +24,8 @@ import (
 	"strings"
 	"unicode"
 
-	. "github.com/andrew-torda/goutil/seq/common"
 	"github.com/andrew-torda/matrix"
+	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 )
 
 // seq is the exported type.

@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/andrew-torda/seq_compat/pkg/randseq"
-	. "github.com/andrew-torda/goutil/seq/common"
+	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 )
 
 func main() {

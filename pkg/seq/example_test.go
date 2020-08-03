@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	. "github.com/andrew-torda/goutil/seq"
+	. "github.com/andrew-torda/seq_compat/pkg/seq"
 )
 
 // wrt_t5 writes testseqs5 to a file and returns the filename and an
