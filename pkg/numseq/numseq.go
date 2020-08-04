@@ -4,14 +4,13 @@ package numseq
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 
 	"github.com/edsrzf/mmap-go"
 )
 
-// byMmap
+// byMmap reads from a file via mmap() and counts ">"
 func byMmap(fname string) (int, error) {
 	var fp *os.File
 	var err error
@@ -27,26 +26,17 @@ func byMmap(fname string) (int, error) {
 	return bytes.Count(mm, []byte(">")), nil
 }
 
-func byreadingFixed(fname string, bufsizeignored int) (int, error) {
+//byReadingFixed reads from a file, piecewise into a buffer and counts ">".
+func byReadingFixed(fname string) (int, error) {
 	const bsize = 64 * 1024
 	var buf [bsize]byte
-	return (innerbyreading(fname, buf[:]))
-}
-
-func byreadingVaries(fname string, bufsize int) (int, error) {
-	buf := make([]byte, bufsize)
-	return (innerbyreading(fname, buf))
-}
-
-func innerbyreading(fname string, buf []byte) (int, error) {
-	var fp io.ReadCloser
+ 	var fp io.ReadCloser
 	var err error
 	if fp, err = os.Open(fname); err != nil {
 		return 0, err
 	}
 	defer fp.Close()
 	count := 0
-	bsize := len(buf)
 	for n := bsize; n == bsize; {
 		n, err = fp.Read(buf[:])
 		if err != nil && err != io.EOF {
@@ -54,15 +44,9 @@ func innerbyreading(fname string, buf []byte) (int, error) {
 		}
 		count += bytes.Count(buf[:n], []byte(">"))
 	}
-
 	return count, nil
 }
 
 func Main(fname string) (int, error) {
-	if _, err := os.Stat(fname); os.IsNotExist(err) {
-		fmt.Println(err)
-	}
-	var tmp [100]byte
-	print(tmp[0:20])
-	return 0, nil
+	return byMmap (fname)
 }

@@ -1,5 +1,4 @@
 package numseq
 
-var ByreadingFixed = byreadingFixed
-var ByreadingVaries = byreadingVaries
+var ByReadingFixed = byReadingFixed
 var ByMmap = byMmap
