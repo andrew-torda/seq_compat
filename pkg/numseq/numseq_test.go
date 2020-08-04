@@ -43,7 +43,6 @@ func TestByreading (t *testing.T) {
 	} else if err != nil {
 		t.Fatal (err)
 	}
-
 }
 
 func setupbmark (b *testing.B) (string, int) {
@@ -99,19 +98,11 @@ func BenchmarkByreadingVary1m(b *testing.B) {
 	}
 }
 
-func BenchmarkByReadFile(b *testing.B) {
+func BenchmarkByMmap (b *testing.B) {
 	fname, nset := setupbmark(b)
-    i, _ := numseq.ByReadFile (fname, -1)
+    i, _ := numseq.ByMmap (fname)
 	if i != nset {
 		b.Fatal ("Expected", nset, "got", i)
 	}
 }
 
-func BenchmarkByOneSlurp (b *testing.B) {
-	fname, nset := setupbmark(b)
-    i, _ := numseq.ByOneSlurp (fname)
-	if i != nset {
-		b.Fatal ("Expected", nset, "got", i)
-	}
-}
-	
