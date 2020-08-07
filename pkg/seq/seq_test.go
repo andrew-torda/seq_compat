@@ -68,6 +68,23 @@ func writeTest_nospaces(f_tmp io.Writer) {
 	}
 }
 
+func TestReadFasta (t *testing.T) {
+	set1 :=
+		`> s1 has a longer comment
+abcdefghi
+> s2
+j k l m n  
+> s3 also has a better comment with a poem. There was a young man from japan, whose limericks they did not quite scan
+  opqr stu`
+	rdr := strings.NewReader (set1)
+	var seqgrp SeqGrp
+	s_opts := &Options{}
+	SetFastaRdSize (10*1024)
+	if err := ReadFasta (rdr, &seqgrp, s_opts); err != nil {
+		t.Fatal("ReadFasta broken")
+	}
+}
+
 // innerWriteReadSeqs writes and then reads a sequence. It should be called
 // once with spaces and once without.
 func innerWriteReadSeqs(t *testing.T, spaces int) {
@@ -87,8 +104,7 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 		Rmv_gaps_wrt: true}
 
 	var seqgrp SeqGrp
-	n_dup, err := ReadSeqs(reader, &seqgrp, s_opts)
-	if err != nil {
+	if err := ReadSeqs(reader, &seqgrp, s_opts); err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
 
@@ -96,9 +112,6 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 		t.Fatalf("Wrote %d seqs, but read only %d.\n%s, %d",
 			len(seq_lengths), seqgrp.GetNSeq(),
 			"Spaces was set to ", spaces)
-	}
-	if n_dup != 0 {
-		t.Fatalf("Found %d dups. Expected zero", n_dup)
 	}
 	for i, s := range seqgrp.GetSeqSlc() {
 		if s.Len() != seq_lengths[i] {
@@ -126,7 +139,7 @@ func TestEmpty(t *testing.T) {
 
 		f_tmp.Close()
 		s_opts := &Options{Vbsty: 0, Keep_gaps_rd: true, Dry_run: true}
-		if _, _, err := Readfile(f_tmp.Name(), s_opts); err == nil {
+		if _, err := Readfile(f_tmp.Name(), s_opts); err == nil {
 			t.Fatal("should generate error on zero-length file")
 		}
 	}
@@ -171,7 +184,7 @@ func TestTypes(t *testing.T) {
 
 	for tnum, x := range stypedata {
 		var seqgrp SeqGrp
-		if _, err := ReadSeqs(strings.NewReader(x.s1), &seqgrp, s_opts); err != nil {
+		if err := ReadSeqs(strings.NewReader(x.s1), &seqgrp, s_opts); err != nil {
 			t.Fatal("TestTypes broke on ReadSeqs", err)
 		}
 		seqgrp.Upper()
@@ -268,7 +281,7 @@ func TestEntropy(t *testing.T) {
 	for tnum, x := range entdata {
 		var seqgrp SeqGrp
 		rdr := strings.NewReader(x.s1)
-		if _, err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
+		if err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
 			t.Fatal("Test: ", tnum, err)
 		}
 		seqgrp.Upper()
@@ -304,7 +317,7 @@ DEF`
 	var seqgrp SeqGrp
 
 	rdr := strings.NewReader(set1)
-	if _, err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
+	if err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
 		t.Fatalf("Reading temp sequences %v", err)
 	}
 	subs := []string{"> some", " some", "some", "seq1"}
@@ -359,7 +372,7 @@ func TestCompat(t *testing.T) {
 			t.Fatal("tempfile error:", err)
 		}
 		defer os.Remove(tmpname)
-		if seqgrp, _, err = Readfile(tmpname, s_opts); err != nil {
+		if seqgrp, err = Readfile(tmpname, s_opts); err != nil {
 			t.Fatalf("Reading temp sequences %v", err)
 		}
 		var n int
