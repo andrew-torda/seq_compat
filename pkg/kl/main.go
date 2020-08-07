@@ -77,7 +77,7 @@ func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 		Rmv_gaps_wrt: true,
 	}
 
-	seqgrp, _, e := seq.Readfile(infile, s_opts)
+	seqgrp, e := seq.Readfile(infile, s_opts)
 	if e != nil {
 		*err = fmt.Errorf("Fail reading sequences: %w", e)
 		bailout()

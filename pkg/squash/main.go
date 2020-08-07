@@ -16,7 +16,7 @@ func MyMain(seqstring, infile, outfile string) int {
 		Dry_run:      false,
 		Rmv_gaps_wrt: false}
 
-	seqgrp, _, err := seq.Readfile(infile, s_opts)
+	seqgrp, err := seq.Readfile(infile, s_opts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return ExitFailure

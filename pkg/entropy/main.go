@@ -75,7 +75,7 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 		outfile: outfile,       // to the printing function later
 		offset:  flags.Offset}
 
-	seqgrp, _, err := seq.Readfile(infile, s_opts)
+	seqgrp, err := seq.Readfile(infile, s_opts)
 	if err != nil {
 		return (fmt.Errorf("Fail reading sequences: %w", err))
 	}

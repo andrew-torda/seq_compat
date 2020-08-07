@@ -20,4 +20,6 @@ func (seqgrp *SeqGrp) PrintFreqs(format string) {
 	}
 }
 
+var SetFastaRdSize = setFastaRdSize
+
 func (seqgrp *SeqGrp) Clear() { seqgrp.clear() }

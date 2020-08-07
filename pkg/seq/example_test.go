@@ -39,7 +39,7 @@ func ExampleRawCount() {
 			log.Fatal("writing testseq")
 		}
 		defer os.Remove(f_tmp)
-		if seqgrp, _, err := Readfile(f_tmp, s_opts); err != nil {
+		if seqgrp, err := Readfile(f_tmp, s_opts); err != nil {
 			log.Fatal(err)
 		} else {
 			seqgrp.Upper()
@@ -70,7 +70,7 @@ func ExampleRawCount() {
 func scaledcheck(gapsAreChar bool) {
 	s_opts := &Options{Vbsty: 0, Keep_gaps_rd: true, Dry_run: true}
 	inner := func(f_tmp string, gapsAreChar bool) {
-		if seqgrp, _, err := Readfile(f_tmp, s_opts); err != nil {
+		if seqgrp, err := Readfile(f_tmp, s_opts); err != nil {
 			log.Fatal(err)
 		} else {
 			seqgrp.Upper()
