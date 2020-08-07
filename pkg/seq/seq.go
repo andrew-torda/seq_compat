@@ -55,6 +55,8 @@ const (
 // Options contains all the choices passed in from the caller.
 type Options struct {
 	Vbsty        int
+	ExpecttSeq   int  // Expected number of sequences
+	DiffLenSeq   bool // false, unless we expect sequences to be different lengths
 	Dry_run      bool // Do not write any files
 	Keep_gaps_rd bool // Keep gaps upon reading
 	Rmv_gaps_wrt bool // Remove gaps on output
@@ -274,6 +276,7 @@ func (seqgrp *SeqGrp) GetSeqSlc() []seq { return seqgrp.seqs }
 // character.
 func (seqgrp *SeqGrp) GetMap(c byte) uint8 { return seqgrp.mapping[c] }
 
+// Upper uppercases all the members of a group of sequences.
 func (seqgrp SeqGrp) Upper() error {
 	for _, ss := range seqgrp.seqs {
 		if err := ss.Upper(); err != nil {
@@ -368,8 +371,6 @@ func (scnr *myscanner) readbigslice(delim byte) (line []byte) {
 // with its comment line and then the actual sequence.
 // Return text up to the next ">" character or EOF.
 // Return true if we are happy.
-//
-//
 func (scnr *myscanner) get_next_lump() bool {
 	scnr.b = scnr.with_nl(cmmt_char)
 	if len(scnr.b) < 2 {
@@ -422,15 +423,11 @@ func lump_split(b []byte, white []bool, scnr *myscanner) (seq seq, err error) {
 	return
 }
 
-// ReadSeqs takes a filename as input and reads sequences in fasta
-// format.  It returns n_duplicates and error. It should work with
-// utf-8 files.  This should not
-// be the case with sequences, but it might be the case with comments.
+// ReadSeqs takes an io.Reader as input and reads sequences in fasta
+// format. It puts its results into the SeqGrp given as a pointer.
+// It is happy with utf-8 in the comments, but not in the sequences.
 // The function will stop reading if it encounters an error.
-// If no filename is given, try reading from standard input.
-
-func ReadSeqs(fp io.Reader, seqgrp *SeqGrp, s_opts *Options) (n_dup int, err error) {
-	seq_map := make(map[string]int)
+func ReadSeqs(fp io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	s := newmyscanner(fp)
 	{ //                 Our scanner eats '>' characters, but our
 		var btmp byte // first line has not been through scanner,
@@ -453,13 +450,10 @@ func ReadSeqs(fp io.Reader, seqgrp *SeqGrp, s_opts *Options) (n_dup int, err err
 		white[GapChar] = true // "-" characters. Treat them as white space
 	}
 
-	const dup_warn = "Sequence starting \"%s\" was duplicated\n"
-
 	nc := 0
 
 	for s.get_next_lump() {
 		nc++
-		const h_len = 40 // Hash on the first 40 char of a sequence comment
 		var seq seq
 		if s.err != nil {
 			err = fmt.Errorf("reading seq: %v, seq num: %d", s.err, nc)
@@ -470,39 +464,15 @@ func ReadSeqs(fp io.Reader, seqgrp *SeqGrp, s_opts *Options) (n_dup int, err err
 				err, nc, s.b)
 			return
 		}
-		var mini int
-		if len(seq.cmmt) < h_len {
-			mini = len(seq.cmmt)
-		} else {
-			mini = h_len
-		}
-		t := seq.cmmt[:mini] // Hash on first h_len characters to look for duplicates
-		if v, exists := seq_map[t]; exists {
-			s_old := seq_out[v]
-			if bytes.Equal(s_old.GetSeq(), seq.GetSeq()) {
-				n_dup++
-				if s_opts.Vbsty > 5 {
-					fmt.Printf(dup_warn, t)
-				}
-				continue
-			} else {
-				if s_opts.Vbsty > 3 {
-					fmt.Printf("Likely overlap with %s from another file\n", t)
-				}
-			}
-		}
-		seq_map[t] = len(seq_out) // Index of sequence for future comparisons
-
 		seq_out = append(seq_out, seq)
 	}
-	breaker()
+
 	seqgrp.seqs = append(seqgrp.seqs, seq_out...)
 	if s_opts.Keep_gaps_rd {
 		check_lengths(seqgrp.seqs)
 	}
 	return
 }
-func breaker() {}
 
 // check_seq_lengths should only be called if we are keeping
 // gaps. Then we imagine all the sequences are aligned, so they
@@ -523,17 +493,15 @@ sequence %i length: %i. Sequence starts %s"`
 }
 
 // Readfile takes a filename and reads sequences from it.
-// each in turn. It returns a SeqGrp, number of duplicates and error.
-func Readfile(fname string, s_opts *Options) (*SeqGrp, int, error) {
+// each in turn. It returns a SeqGrp and error.
+func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
 	var seqgrp SeqGrp
 	var err error
-	var n_dup int
-
 	var fp io.ReadCloser // don't use a file. It could be stdin.
 
 	if fname != "" {
 		if fp, err = os.Open(fname); err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 	} else {
 		fp = os.Stdin
@@ -541,14 +509,14 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, int, error) {
 
 	defer fp.Close()
 
-	if n_dup, err := ReadSeqs(fp, &seqgrp, s_opts); err != nil {
-		return &seqgrp, n_dup, err
+	if err := ReadSeqs(fp, &seqgrp, s_opts); err != nil {
+		return &seqgrp, err
 	}
 
 	if s_opts.Keep_gaps_rd {
 		check_lengths(seqgrp.seqs)
 	}
-	return &seqgrp, n_dup, err
+	return &seqgrp, err
 }
 
 // WriteToF takes a filename and a slice of sequences.
