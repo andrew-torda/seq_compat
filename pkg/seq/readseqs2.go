@@ -53,7 +53,7 @@ func (l *lexer) next() {
 					close(l.ichan)
 					return
 				} else { // Partial read. EOF, not an error
-					l.input[n] = l.term // Add terminator
+					l.input[n] = cmmtChar // Add terminator
 				}
 			}
 		}
@@ -67,6 +67,11 @@ func (l *lexer) next() {
 			item.data = l.input[:ndx]    //
 			item.complete = true         //
 			l.input = newlInput          //        Set up for next loop
+			if l.term == NL {
+				l.term = cmmtChar
+			} else {
+				l.term = NL
+			}
 		}
 		l.ichan <- item
 	}
@@ -94,15 +99,14 @@ func gseq(l *lexer) stateFn {
 	r := removeWhite(item.data)
 	l.seq = append(l.seq, r...)
 	if item.complete {
+		seq := seq{cmmt: l.cmmt, seq: l.seq}
+		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
 		l.cmmt = ""
 		l.seq = nil
-		l.term = NL
 		return gcmmt
 	}
 	return gseq
 }
-
-func (l *lexer) breaker() {}
 
 // We are reading a comment
 func gcmmt(l *lexer) stateFn {
@@ -110,13 +114,10 @@ func gcmmt(l *lexer) stateFn {
 	if item == nil || l.err != nil {
 		return nil
 	}
-	if bytes.Contains(item.data, []byte("apan")) {
-		l.breaker()
-	}
+
 	l.cmmt = l.cmmt + string(item.data)
 	if item.complete {
 		item.complete = false
-		l.term = cmmtChar
 		return gseq
 	}
 	return gcmmt
@@ -124,7 +125,7 @@ func gcmmt(l *lexer) stateFn {
 
 // Readfasta is my second version of a fasta reader.
 func ReadFasta(rdr io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
-	l := lexer{rdr: rdr, ichan: make(chan *item), term: NL}
+	l := lexer{rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL}
 
 	go l.next()
 	for state := gcmmt; state != nil; {
