@@ -46,7 +46,6 @@ func newItem() interface{} { return new(item) }
 // end of input.
 func (l *lexer) next() {
 	l.itempool.New = newItem
-	l.rdBufpool.New = newRdBuf
 	for {
 		item := l.itempool.Get().(*item)
 		if len(l.input) == 0 {
