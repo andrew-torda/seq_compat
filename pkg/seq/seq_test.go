@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"sync"
 	"strings"
 	"testing"
 
@@ -514,12 +515,16 @@ func TestGetNSeq(t *testing.T) {
 		}
 	}
 	for _, a := range testdat {
+		var wg sync.WaitGroup
+		var wgNil *sync.WaitGroup
 		seqgrp1 := Str2SeqGrp(a.ss)
 		seqgrp2 := Str2SeqGrp(a.tt)
 		symSync := SymSync{UChan: make(chan [MaxSym]bool)}
-		go seqgrp1.SetSymUsed(&symSync)
+		wg.Add(1)
+		go seqgrp1.SetSymUsed(&wg, &symSync)
 
-		seqgrp2.SetSymUsed(&symSync)
+		seqgrp2.SetSymUsed(wgNil, &symSync)
+		wg.Wait()
 		if seqgrp1.GetNSym() != seqgrp2.GetNSym() {
 			t.Fatalf("nsym mismatch %d vs %d", seqgrp1.GetNSym(), seqgrp2.GetNSym())
 		}
