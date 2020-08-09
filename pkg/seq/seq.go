@@ -78,7 +78,6 @@ type SeqGrp struct {
 	stype    SeqType
 	usedKnwn bool // Do we know how many symbols are used ?
 	freqKnwn bool // are counts of symbols converted to fractional probabilities ?
-	//	typeKnwn bool // Have we called the function to work out our type dna/prot ?
 }
 
 // Function GetSeq returns the sequence as the original byte slice
