@@ -33,6 +33,44 @@ const (
 	with_spaces
 )
 
+// This is to track down a specific bug I have
+func TestFastaBug(t *testing.T) {
+	const nseq = 5
+	const sLen = 16
+	sb := ""
+	for i := 0; i < nseq; i++ {
+		sb += fmt.Sprintf("> some %d comment\n", i)
+		for j := 0; j < sLen; j++ {
+			sb += fmt.Sprintf("%d", i)
+		}
+		sb += "\n"
+	}
+
+	//	fmt.Println("here are the seqs in testfastabug\n", sb)
+	SetFastaRdSize(200)
+
+	s_opts := &Options{
+		Vbsty: 0, Keep_gaps_rd: false,
+		Dry_run:      true,
+		Rmv_gaps_wrt: true,
+	}
+
+	var seqgrp, junk SeqGrp
+	if err := ReadFasta(strings.NewReader(sb), &junk, s_opts); err != nil {
+		t.Fatal("Reading into &junk", err)
+	}
+
+	f := ReadFasta
+
+	if err := f(strings.NewReader(sb), &seqgrp, s_opts); err != nil {
+		t.Fatal("Reading seqs failed", err)
+	}
+	if seqgrp.GetNSeq() != nseq {
+		t.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), nseq, seqgrp.GetLen())
+	}
+
+}
+
 // writeTest_with_spaces provides some sequences with different patterns of
 // white space and some gap characters mixed in. It sticks it in an io.Writer.
 func writeTest_with_spaces(f_tmp io.Writer) {
@@ -68,7 +106,7 @@ func writeTest_nospaces(f_tmp io.Writer) {
 	}
 }
 
-func TestReadFasta (t *testing.T) {
+func TestReadFasta(t *testing.T) {
 	set1 :=
 		`> s1 has a longer comment
 abcdefghi
@@ -76,11 +114,11 @@ abcdefghi
 j k l m n  
 > s3 also has a better comment with a poem. There was a young man from japan, whose limericks they did not quite scan
   opqr stu`
-	rdr := strings.NewReader (set1)
+	rdr := strings.NewReader(set1)
 	var seqgrp SeqGrp
 	s_opts := &Options{}
-	SetFastaRdSize (10*1024)
-	if err := ReadFasta (rdr, &seqgrp, s_opts); err != nil {
+	SetFastaRdSize(10 * 1024)
+	if err := ReadFasta(rdr, &seqgrp, s_opts); err != nil {
 		t.Fatal("ReadFasta broken")
 	}
 }
@@ -279,9 +317,9 @@ func TestEntropy(t *testing.T) {
 		Rmv_gaps_wrt: false}
 
 	for tnum, x := range entdata {
-		var seqgrp SeqGrp
+		seqgrp := new(SeqGrp)
 		rdr := strings.NewReader(x.s1)
-		if err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
+		if err := ReadSeqs(rdr, seqgrp, s_opts); err != nil {
 			t.Fatal("Test: ", tnum, err)
 		}
 		seqgrp.Upper()
@@ -364,14 +402,15 @@ func TestCompat(t *testing.T) {
 		Vbsty: 0, Keep_gaps_rd: true,
 		Dry_run:      true,
 		Rmv_gaps_wrt: false}
-	var tmpname string
-	var err error
-	var seqgrp *SeqGrp
+
 	for i, exp := range expected {
+		var err error
+		var tmpname string
 		if tmpname, err = wrtTmp(exp.s); err != nil {
 			t.Fatal("tempfile error:", err)
 		}
 		defer os.Remove(tmpname)
+		var seqgrp *SeqGrp
 		if seqgrp, err = Readfile(tmpname, s_opts); err != nil {
 			t.Fatalf("Reading temp sequences %v", err)
 		}
@@ -391,7 +430,7 @@ func TestCompat(t *testing.T) {
 
 // getSeqGrpSameLen returns a seqgroup in which all the sequences have the same
 // length
-func getSeqGrpSameLen() SeqGrp {
+func getSeqGrpSameLen() *SeqGrp {
 	ss := []string{"aaaa", "abcd"}
 	return Str2SeqGrp(ss, "s")
 }
