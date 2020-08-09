@@ -5,7 +5,7 @@ package seq_test
 import (
 	"strings"
 	"testing"
-	"fmt"
+
 	
 	"github.com/andrew-torda/seq_compat/pkg/randseq"
 	"github.com/andrew-torda/seq_compat/pkg/seq"
@@ -20,16 +20,16 @@ func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
 	args := randseq.RandSeqArgs {
 		Wrtr: &sb,
 		Cmmt: "testing seq",
-		Nseq: 5,
-		Len: 16,
+		Nseq: 1000,
+		Len: 1600,
 	}
 	if err := randseq.RandSeqMain(&args); err != nil {
 		b.Fatal(err)
 	}
-	fmt.Println ("here are theseqs\n", sb.String())
+
 	seq.SetFastaRdSize (i)
 
-	writeTest_with_spaces(&sb)
+
 	reader := strings.NewReader(sb.String())
 	s_opts := &seq.Options{
 		Vbsty: 0, Keep_gaps_rd: false,
@@ -48,7 +48,7 @@ func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
 	if err := f(reader, &seqgrp, s_opts); err != nil {
 		b.Fatal("Reading seqs failed", err)
 	}
-	b.StopTimer()
+
 	if seqgrp.GetNSeq() != args.Nseq  { b.Fatalf ("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), args.Nseq, seqgrp.GetLen())}
 }
 
