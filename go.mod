@@ -7,5 +7,3 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0
 	golang.org/x/sys v0.0.0-20200803210538-64077c9b5642 // indirect
 )
-
-replace github.com/andrew-torda/matrix => /home/torda/g2/matrix
