@@ -495,7 +495,7 @@ sequence %i length: %i. Sequence starts %s"`
 // Readfile takes a filename and reads sequences from it.
 // each in turn. It returns a SeqGrp and error.
 func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
-	var seqgrp SeqGrp
+	var seqgrp = new (SeqGrp)
 	var err error
 	var fp io.ReadCloser // don't use a file. It could be stdin.
 
@@ -509,14 +509,14 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
 
 	defer fp.Close()
 
-	if err := ReadSeqs(fp, &seqgrp, s_opts); err != nil {
-		return &seqgrp, err
+	if err := ReadSeqs(fp, seqgrp, s_opts); err != nil {
+		return seqgrp, err
 	}
 
 	if s_opts.Keep_gaps_rd {
 		check_lengths(seqgrp.seqs)
 	}
-	return &seqgrp, err
+	return seqgrp, err
 }
 
 // WriteToF takes a filename and a slice of sequences.
@@ -598,8 +598,9 @@ func (seqgrp *SeqGrp) FindNdx(s string) int {
 // sIn is a slice of strings which are the sequences.
 // prefix is an optional argument. Sequences need names/comments. If
 // prefix is not given, sequences will be called "> s1", "> s2", ...
-func Str2SeqGrp(sIn []string, prefix ...string) (seqgrp SeqGrp) {
+func Str2SeqGrp(sIn []string, prefix ...string) (*SeqGrp) {
 	var base string
+	seqgrp := new (SeqGrp)
 	if prefix == nil {
 		base = "s"
 	} else {
