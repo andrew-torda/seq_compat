@@ -20,8 +20,8 @@ func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
 	args := randseq.RandSeqArgs {
 		Wrtr: &sb,
 		Cmmt: "testing seq",
-		Nseq: 1000,
-		Len: 1600,
+		Nseq: 2000,
+		Len:  1937,
 	}
 	if err := randseq.RandSeqMain(&args); err != nil {
 		b.Fatal(err)
