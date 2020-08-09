@@ -90,7 +90,8 @@ func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 	}
 	seqgrp.Upper()
 
-	seqgrp.SetSymUsed(symSync)
+
+	seqgrp.SetSymUsed(nil, symSync)
 	*err = getSeqX(seqgrp, seqX, flags)
 }
 

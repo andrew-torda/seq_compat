@@ -9,8 +9,8 @@ import (
 	"math"
 	"sync"
 
-	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 	"github.com/andrew-torda/matrix"
+	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 )
 
 const (
@@ -31,6 +31,7 @@ func mergelists(uChan chan [MaxSym]bool) {
 	for i := range a1 {
 		a1[i] = a1[i] || a2[i]
 	}
+
 	uChan <- a1
 	uChan <- a1
 	close(uChan)
@@ -42,7 +43,10 @@ func mergelists(uChan chan [MaxSym]bool) {
 // two seqgrp's, then the symbols used in group A should also be
 // marked used in group B and vice versa. If we get a second varadic
 // argument, it is a channel to be used in combining.
-func (seqgrp *SeqGrp) SetSymUsed(symSync ...*SymSync) {
+func (seqgrp *SeqGrp) SetSymUsed(wg *sync.WaitGroup, symSync ...*SymSync) {
+	if wg != nil {
+		defer wg.Done()
+	}
 	for _, ss := range seqgrp.seqs {
 		s := ss.GetSeq()
 		for _, c := range s {
@@ -61,11 +65,12 @@ func (seqgrp *SeqGrp) SetSymUsed(symSync ...*SymSync) {
 // as to the type of file.
 func (seqgrp *SeqGrp) GetType() SeqType {
 	if seqgrp.stype != Unchecked { // If the sequence type has been
-		return seqgrp.stype //      set, just return it.
+		return seqgrp.stype //        set, just return it.
 	}
 
 	if seqgrp.usedKnwn != true {
-		seqgrp.SetSymUsed()
+		var wg *sync.WaitGroup
+		seqgrp.SetSymUsed(wg)
 	}
 	protType := []byte{
 		'D', 'E', 'F', 'H', 'I', 'K', 'L', 'M',
@@ -98,9 +103,10 @@ func (seqgrp *SeqGrp) GetType() SeqType {
 
 // mapsyms looks at the symbols(characters, bases, residues) used in a
 // seqgrp. It then makes a little array for mapping.
+// This writes into seqgrp.symUsed[i], but this is also used
 func (seqgrp *SeqGrp) mapsyms() error {
 	if seqgrp.usedKnwn != true {
-		seqgrp.SetSymUsed()
+		seqgrp.SetSymUsed((*sync.WaitGroup)(nil))
 	}
 	for i := range seqgrp.mapping { // Initialise with bad value, to
 		seqgrp.mapping[i] = badMap // trap errors later

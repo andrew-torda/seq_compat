@@ -38,10 +38,10 @@ func TestSimple1(t *testing.T) {
 	seqgrp2 := seq.Str2SeqGrp(s2, "t")
 	var seqX1, seqX2 SeqX
 
-	if err := GetSeqX(&seqgrp1, &seqX1, &flags); err != nil {
+	if err := GetSeqX(seqgrp1, &seqX1, &flags); err != nil {
 		t.Fatal(err)
 	}
-	if err := GetSeqX(&seqgrp2, &seqX2, &flags); err != nil {
+	if err := GetSeqX(seqgrp2, &seqX2, &flags); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -99,10 +99,10 @@ func TestKL(t *testing.T) {
 	seqgrp2 := seq.Str2SeqGrp(ss[1], "tt1")
 
 	var seqX1, seqX2 SeqX
-	if err := GetSeqX(&seqgrp1, &seqX1, &flags); err != nil {
+	if err := GetSeqX(seqgrp1, &seqX1, &flags); err != nil {
 		t.Fatal(err)
 	}
-	if err := GetSeqX(&seqgrp2, &seqX2, &flags); err != nil {
+	if err := GetSeqX(seqgrp2, &seqX2, &flags); err != nil {
 		t.Fatal(err)
 	}
 
