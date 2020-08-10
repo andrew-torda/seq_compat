@@ -2,23 +2,18 @@
 
 package white
 
-func isWhite(c byte) bool {
+// WhiteRemove acts on a byte slice, in place and removes all the white
+// space. Note, this change len().
+
+func Remove(sIn *[]byte) {
 	var asciiSpace = [256]bool{
 		'\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
 	}
-	return asciiSpace[c]
-}
-
-// WhiteRemove acts on a byte slice, in place and removes all the white
-// space. Note, this change len().
-type ByteSlice []byte
-
-func (sIn *ByteSlice) WhiteRemove() {
 	s := *sIn
 	i, j := 0, 0
-	for ; j < len(s); i, j = i+1, j+1{
-		for ; j < len(s); {
-			if isWhite(s[j]) {
+	for ; j < len(s); i, j = i+1, j+1 {
+		for j < len(s) {
+			if asciiSpace[s[j]] {
 				j++
 			} else {
 				break
@@ -31,7 +26,7 @@ func (sIn *ByteSlice) WhiteRemove() {
 	}
 	const fill_in_with_nulls = false
 	if fill_in_with_nulls {
-		for n:= i; n < len(s); n++ {
+		for n := i; n < len(s); n++ {
 			s[n] = 0
 		}
 	}
