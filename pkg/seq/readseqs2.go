@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"io"
 	"sync"
+
+	"github.com/andrew-torda/seq_compat/pkg/white"
 )
 
 // An item is terminated by a newline if we are in a comment or a comment
@@ -102,8 +104,9 @@ func gseq(l *lexer) stateFn {
 	if item == nil || l.err != nil {
 		return nil
 	}
-	r := removeWhite(item.data)
-	l.seq = append(l.seq, r...)
+
+	white.Remove(&item.data)
+	l.seq = append(l.seq, item.data...)
 	if item.complete {
 		seq := seq{cmmt: l.cmmt, seq: l.seq}
 		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
