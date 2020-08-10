@@ -2,10 +2,6 @@
 
 package white
 
-import (
-	"fmt"
-)
-
 func isWhite(c byte) bool {
 	var asciiSpace = [256]bool{
 		'\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
@@ -14,18 +10,32 @@ func isWhite(c byte) bool {
 }
 
 // WhiteRemove acts on a byte slice, in place and removes all the white
-// space. Check if we return it with the length adjusted, but the capacity
-// unchanged.
+// space. Note, this change len().
 type ByteSlice []byte
 
-func (sIn ByteSlice) WhiteRemove() {
-	fmt.Println("hello from whiteremove got", string(sIn))
-	var s, t *byte
-	s = &(sIn[0])
-	t = s
-	for i, s := range sIn {
-
+func (sIn *ByteSlice) WhiteRemove() {
+	s := *sIn
+	i, j := 0, 0
+	for ; j < len(s); i, j = i+1, j+1{
+		for ; j < len(s); {
+			if isWhite(s[j]) {
+				j++
+			} else {
+				break
+			}
+		}
+		if j >= len(s) {
+			break
+		}
+		s[i] = s[j]
 	}
+	const fill_in_with_nulls = false
+	if fill_in_with_nulls {
+		for n:= i; n < len(s); n++ {
+			s[n] = 0
+		}
+	}
+	*sIn = s[:i]
 }
 
 /* C version
