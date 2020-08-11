@@ -39,7 +39,12 @@ const defaultReadSize = 512
 var rdsize int = defaultReadSize
 
 // setFastaRdSize is only used during benchmarking
-func setFastaRdSize(i int) { rdsize = i }
+func setFastaRdSize(i int) {
+	if i <= 2 {
+		panic("setFastaRdSize given buffer length of 2 or less")
+	}
+	rdsize = i
+}
 
 func newItem() interface{} { return new(item) }
 
@@ -57,6 +62,8 @@ func (l *lexer) next() {
 					if err != nil && err != io.EOF {
 						l.err = err // signal that a real error occurred.
 					}
+					item.complete = true // If we ended without a newline
+					l.ichan <- item      // we have to flush
 					close(l.ichan)
 					return
 				} else { // Partial read. EOF, not an error
