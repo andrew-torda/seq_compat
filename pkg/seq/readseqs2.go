@@ -148,5 +148,5 @@ func ReadFasta(rdr io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	for state := gcmmt; state != nil; {
 		state = state(&l)
 	}
-	return nil
+	return l.err
 }
