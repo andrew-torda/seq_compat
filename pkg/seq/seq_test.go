@@ -108,13 +108,9 @@ func writeTest_nospaces(f_tmp io.Writer) {
 }
 
 func TestReadFastaShort(t *testing.T) {
-	set1 :=
-		`> s1 has a longer comment
-abcdefghij
-> s2
-abcdefghi j 
-> s3 also has a better comment with a poem. There was a young man from japan, whose limericks they did not quite scan
-abcdefghi j`
+	set1 := ">\n" + "abcdefghij\n" +
+		"> longer comment" + strings.Repeat(" x", 300) + "\n" + strings.Repeat("a", 10) + "\n" +
+		"> longer comment" + strings.Repeat(" x", 3) + "\n" + strings.Repeat(" a ", 10) + strings.Repeat(" ", 167)
 	bsize := []int{3, 4, 5, 10, 100, 512}
 
 	for i, bs := range bsize {
@@ -125,11 +121,11 @@ abcdefghi j`
 		if err := ReadFasta(rdr, &seqgrp, s_opts); err != nil {
 			t.Fatal("ReadFasta broken")
 		}
-		if n:= seqgrp.GetLen(); n != 10 {
+		if n := seqgrp.GetLen(); n != 10 {
 			t.Fatal("seq num", i, "got", seqgrp.GetLen(), "want 10")
 		}
-		if n:= seqgrp.GetNSeq(); n != 3 {
-			t.Fatal ("seq loop num", i, "got nseq", seqgrp.GetNSeq(), "want 3")
+		if n := seqgrp.GetNSeq(); n != 3 {
+			t.Fatal("seq loop num", i, "got nseq", seqgrp.GetNSeq(), "want 3")
 		}
 	}
 }
