@@ -6,8 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"sync"
 	"strings"
+	"sync"
 	"testing"
 
 	. "github.com/andrew-torda/seq_compat/pkg/seq"
@@ -107,20 +107,30 @@ func writeTest_nospaces(f_tmp io.Writer) {
 	}
 }
 
-func TestReadFasta(t *testing.T) {
+func TestReadFastaShort(t *testing.T) {
 	set1 :=
 		`> s1 has a longer comment
-abcdefghi
+abcdefghij
 > s2
-j k l m n  
+abcdefghi j 
 > s3 also has a better comment with a poem. There was a young man from japan, whose limericks they did not quite scan
-  opqr stu`
-	rdr := strings.NewReader(set1)
-	var seqgrp SeqGrp
-	s_opts := &Options{}
-	SetFastaRdSize(10 * 1024)
-	if err := ReadFasta(rdr, &seqgrp, s_opts); err != nil {
-		t.Fatal("ReadFasta broken")
+abcdefghi j`
+	bsize := []int{3, 4, 5, 10, 100, 512}
+
+	for i, bs := range bsize {
+		rdr := strings.NewReader(set1)
+		var seqgrp SeqGrp
+		s_opts := &Options{}
+		SetFastaRdSize(bs)
+		if err := ReadFasta(rdr, &seqgrp, s_opts); err != nil {
+			t.Fatal("ReadFasta broken")
+		}
+		if n:= seqgrp.GetLen(); n != 10 {
+			t.Fatal("seq num", i, "got", seqgrp.GetLen(), "want 10")
+		}
+		if n:= seqgrp.GetNSeq(); n != 3 {
+			t.Fatal ("seq loop num", i, "got nseq", seqgrp.GetNSeq(), "want 3")
+		}
 	}
 }
 
