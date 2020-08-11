@@ -4,6 +4,7 @@ package seq
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"sync"
 
@@ -62,12 +63,13 @@ func (l *lexer) next() {
 					if err != nil && err != io.EOF {
 						l.err = err // signal that a real error occurred.
 					}
-					item.complete = true // If we ended without a newline
-					l.ichan <- item      // we have to flush
+					item.data = []byte("")
+					item.complete = true
+					l.ichan <- item // we have to flush
 					close(l.ichan)
 					return
 				} else { // Partial read. EOF, not an error
-					l.input[n] = cmmtChar // Add terminator
+					l.input[n] = l.term // Add terminator
 				}
 			}
 		}
@@ -115,6 +117,9 @@ func gseq(l *lexer) stateFn {
 	white.Remove(&item.data)
 	l.seq = append(l.seq, item.data...)
 	if item.complete {
+		if len(l.seq) == 0 {
+			l.err = errors.New("Zero length sequence after" + l.cmmt)
+		}
 		seq := seq{cmmt: l.cmmt, seq: l.seq}
 		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
 		l.cmmt = ""
