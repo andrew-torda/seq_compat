@@ -40,7 +40,7 @@ func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
 	var seqgrp, junk seq.SeqGrp
 	_ = seq.ReadFasta (strings.NewReader(sb.String()), &junk,  s_opts)
 
-	f := seq.ReadSeqs
+	f := seq.ReadFasta
 	if (oldvers == true) {
 		f = seq.ReadSeqs
 	}
@@ -55,7 +55,9 @@ func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
 func Benchmark3 (b *testing.B) { benchmarkReadFasta (3, b, false) }
 func Benchmark4 (b *testing.B) { benchmarkReadFasta (4, b, false) }
 func Benchmark512 (b *testing.B) { benchmarkReadFasta (512, b, false) }
+func Benchmark2k (b *testing.B) { benchmarkReadFasta (2 * 1024, b, false) }
 func Benchmark4k (b *testing.B) { benchmarkReadFasta (4 * 1024, b, false) }
 func Benchmark10k (b *testing.B) { benchmarkReadFasta (10 * 1024, b, false) }
 func Benchmark20k (b *testing.B) { benchmarkReadFasta (20 * 1024, b, false) }
+func Benchmark40k (b *testing.B) { benchmarkReadFasta (40 * 1024, b, false) }
 func BenchmarkOld (b *testing.B) { benchmarkReadFasta (4 * 1024, b, true) }
