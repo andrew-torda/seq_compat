@@ -7,8 +7,9 @@ package white
 
 func Remove(sIn *[]byte) {
 	var asciiSpace = [256]bool{
-		'\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
+		0: true, '\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
 	}
+
 	s := *sIn
 	i, j := 0, 0
 	for ; j < len(s); i, j = i+1, j+1 {
@@ -33,19 +34,39 @@ func Remove(sIn *[]byte) {
 	*sIn = s[:i]
 }
 
-/* C version
-no_blnk_num (char *s)
-{
-    size_t n = 0;
-    char *t = s;
-    while (*t) {
-        while( isspace ((int)*t) || isdigit ((int)*t))
-            t++;
-        *s++ = *t;
-        if (! *t++)
-            break;
-        n++;
-    }
-    return n;
+// This version will copy block by block, instead of byte by byte
+func Remove2(sIn *[]byte) {
+	var asciiSpace = [256]bool{
+		0: true, '\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
+	}
+
+	s := *sIn
+	inwhite := true
+	var start, dst int
+
+	for i := 0; i < len(s); i++ {
+		if inwhite {
+			if !asciiSpace[s[i]] {
+				start = i
+				inwhite = false
+				continue
+			}
+		} else {
+			if asciiSpace[s[i]] { // end of block
+				ltmp := i - start // this is the correct length
+				copy(s[dst:dst+ltmp], s[start:i+1])
+				dst = dst + ltmp
+				inwhite = true
+			}
+		}
+	}
+
+	if !inwhite { // hit end of input, so spit out leftovers
+		ltmp := len(s) - start
+		s = append(s[:dst], s[start:start+ltmp]...)
+
+	} else { // If we finished in white space, we have to truncate
+		s = s[:dst]
+	}
+	*sIn = s
 }
-*/
