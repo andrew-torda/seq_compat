@@ -107,6 +107,19 @@ func writeTest_nospaces(f_tmp io.Writer) {
 	}
 }
 
+func TestBrokenSeq (t *testing.T) {
+	s := `> s1
+abc
+> s2 there is no sequence next`
+	var seqgrp SeqGrp
+	s_opts := &Options{}
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err == nil {
+		t.Fatal("incomplete sequence did not break")
+	}
+	print()
+}
+
+
 func TestReadFastaShort(t *testing.T) {
 	set1 := ">\n" + "abcdefghij\n" +
 		"> longer comment" + strings.Repeat(" x", 300) + "\n" + strings.Repeat("a", 10) + "\n" +
