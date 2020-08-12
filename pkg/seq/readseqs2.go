@@ -99,13 +99,6 @@ func gstart(l *lexer) stateFn {
 	return gstart
 }
 
-// This is a function which might use a bit of memory. Replace it later
-func removeWhite(s []byte) []byte {
-	f := bytes.Fields(s)
-	r := bytes.Join(f, []byte(""))
-	return r
-}
-
 // We are reading a sequence
 func gseq(l *lexer) stateFn {
 	item := <-l.ichan
