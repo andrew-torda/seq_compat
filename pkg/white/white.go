@@ -2,8 +2,12 @@
 
 package white
 
+import (
+	"bytes"
+)
+
 // WhiteRemove acts on a byte slice, in place and removes all the white
-// space. Note, this change len().
+// space. Note, this changes len().
 
 func Remove(sIn *[]byte) {
 	var asciiSpace = [256]bool{
@@ -31,11 +35,11 @@ func Remove(sIn *[]byte) {
 			s[n] = 0
 		}
 	}
-	*sIn = s[:i]
+	*sIn = s[:i] // This is the truncation
 }
 
 // This version will copy block by block, instead of byte by byte
-func Remove2(sIn *[]byte) {
+func removeByBlock(sIn *[]byte) {
 	var asciiSpace = [256]bool{
 		0: true, '\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
 	}
@@ -68,5 +72,13 @@ func Remove2(sIn *[]byte) {
 	} else { // If we finished in white space, we have to truncate
 		s = s[:dst]
 	}
+	*sIn = s
+}
+
+// RemoveByFields does the same, but using a library call
+func removeByFields(sIn *[]byte) {
+	s := *sIn
+	s = bytes.Join(bytes.Fields(s), []byte(""))
+
 	*sIn = s
 }
