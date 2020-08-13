@@ -4,7 +4,6 @@ package white
 
 import (
 	"bytes"
-	"fmt"
 )
 
 // WhiteRemove acts on a byte slice, in place and removes all the white
@@ -71,21 +70,18 @@ func removeByBlock(sIn *[]byte) {
 	*sIn = s
 }
 
-func RemoveWithGoTo(sIn *[]byte) {
+func removeWithBlocks2(sIn *[]byte) {
 	var asciiSpace = [256]bool{
 		0: true, '\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
 	}
 
 	s := *sIn
-	fmt.Printf("In: \"%s\".. ", string(s))
+
 	var start, dst int
-
 	i := 0
-
 	mustclean := false
 white:
 	for i < len(s) {
-
 		for ; i < len(s); i++ {
 			if !asciiSpace[s[i]] {
 				start = i
@@ -96,7 +92,7 @@ white:
 		for ; i < len(s); i++ {
 			mustclean = true
 			if asciiSpace[s[i]] { // end of block
-				ltmp := i - start // this is the correct length
+				ltmp := i - start // lengt of block to copy
 				copy(s[dst:dst+ltmp], s[start:i+1])
 				dst = dst + ltmp
 				mustclean = false
@@ -111,7 +107,6 @@ white:
 		s = s[:dst]
 	}
 	*sIn = s
-	fmt.Printf("out: \"%s\"\n", string(s))
 }
 
 // RemoveByFields does the same, but using a library call

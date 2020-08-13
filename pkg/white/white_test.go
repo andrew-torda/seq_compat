@@ -35,13 +35,13 @@ func testoneversion(f ftest, t *testing.T) {
 		b := []byte(s)
 		f(&b)
 		if string(b) != want {
-			t.Fatalf("white remove broke on \"%s\" got \"%s\"", string(s), ss[i])
+			t.Fatalf("white remove broke on \"%s\" got \"%s\"", string(b), ss[i])
 		}
 	}
 }
 
 func TestWhiteRemove(t *testing.T) {
-	fws := []ftest{Remove, RemoveByBlock, RemoveByFields}
+	fws := []ftest{RemoveWithBlocks2, Remove, RemoveByBlock, RemoveByFields}
 	for _, f := range fws {
 		testoneversion(f, t)
 	}

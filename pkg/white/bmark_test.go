@@ -38,3 +38,7 @@ func BenchmarkByFields(b *testing.B) {
 	f := white.RemoveByFields
 	benchmarkWhite(f, b)
 }
+func BenchmarkByBlocks2(b *testing.B) {
+	f := white.RemoveWithBlocks2
+	benchmarkWhite(f, b)
+}
