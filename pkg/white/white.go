@@ -29,12 +29,7 @@ func Remove(sIn *[]byte) {
 		}
 		s[i] = s[j]
 	}
-	const fill_in_with_nulls = false
-	if fill_in_with_nulls {
-		for n := i; n < len(s); n++ {
-			s[n] = 0
-		}
-	}
+
 	*sIn = s[:i] // This is the truncation
 }
 
