@@ -26,19 +26,11 @@ func benchmarkWhite(f fw, b *testing.B) {
 	}
 }
 
-func BenchmarkByBlock(b *testing.B) {
-	f := white.RemoveByBlock
+func BenchmarkRemoveWithBlocks(b *testing.B) {
+	f := white.RemoveWithBlocks
 	benchmarkWhite(f, b)
 }
 func BenchmarkByByte(b *testing.B) {
 	f := white.Remove
-	benchmarkWhite(f, b)
-}
-func BenchmarkByFields(b *testing.B) {
-	f := white.RemoveByFields
-	benchmarkWhite(f, b)
-}
-func BenchmarkByBlocks2(b *testing.B) {
-	f := white.RemoveWithBlocks2
 	benchmarkWhite(f, b)
 }

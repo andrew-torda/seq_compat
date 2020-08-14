@@ -41,7 +41,7 @@ func testoneversion(f ftest, t *testing.T) {
 }
 
 func TestWhiteRemove(t *testing.T) {
-	fws := []ftest{RemoveWithBlocks2, Remove, RemoveByBlock, RemoveByFields}
+	fws := []ftest{RemoveWithBlocks, Remove}
 	for _, f := range fws {
 		testoneversion(f, t)
 	}
