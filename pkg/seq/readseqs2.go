@@ -138,13 +138,16 @@ func gcmmt(l *lexer) stateFn {
 	return gcmmt
 }
 
-// Readfasta is my second version of a fasta reader.
+// ReadFasta reads fasta formatted files.
 func ReadFasta(rdr io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	l := lexer{rdr: rdr, ichan: make(chan *item, 2), seqgrp: seqgrp, term: NL}
 
 	go l.next()
 	for state := gcmmt; state != nil; {
 		state = state(&l)
+	}
+	if seqgrp.GetNSeq() == 0 {
+		l.err = errors.New("No sequences found")
 	}
 	return l.err
 }
