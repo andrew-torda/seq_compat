@@ -14,15 +14,11 @@
 package seq
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
-	"unicode"
 
 	"github.com/andrew-torda/matrix"
 	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
@@ -285,194 +281,6 @@ func (seqgrp SeqGrp) Upper() error {
 	return nil
 }
 
-// myscanner is used when reading sequences.
-// It it tied to a bufio.Reader, which is really a read-only file.
-// b is where pieces of text are read into and then split into comment
-// and sequence. It will not go away until the myscanner goes away.
-// This avoid a boatload of allocations (one per sequence).
-type myscanner struct {
-	bufio_reader *bufio.Reader
-	b            []byte
-	eof          bool
-	err          error
-}
-
-// newmyscanner ? do we really need this, or can we just put a scanner on the
-// stack in the function that uses it ?
-func newmyscanner(fp io.Reader) *myscanner {
-	r := new(myscanner)
-	r.bufio_reader = bufio.NewReader(fp)
-	return r
-}
-
-// with_nl is a necessary evil. usually, we search for ">" to get the start of the
-// next sequence. It must be at the start of a line.
-// It can happen that someone has buried a ">" in the middle of a line.
-// Check for this. If it has happened, then we need to allocate a new buffer, append
-// into it and return a slice with this buffer.
-func (scnr *myscanner) with_nl(delim byte) (line []byte) {
-	line = scnr.readbigslice(delim)
-	if len(line) < 1 {
-		return
-	}
-	if len(line) > 2 { // Normal common case
-		l := len(line) - 2
-		if line[l] == '\n' || scnr.eof == true {
-			return line
-		}
-	}
-	var a []byte                                    // Comment line broke our parser
-	var tmp_line []byte = make([]byte, len(line))   // Save what we have in a newly
-	copy(tmp_line, line)                            // allocated buffer
-	a, scnr.err = scnr.bufio_reader.ReadBytes('\n') // Just go to end of line
-	if scnr.err != nil {
-		return
-	}
-
-	tmp_line = append(tmp_line, a...) // Stick it on the end and keep going
-	a = scnr.readbigslice(delim)      // This will go until the ">"
-	line = append(tmp_line, a...)     // Now we do not need tmp_line any more
-	return
-}
-
-// readbigslice is a wrapper around ReadSlice.
-// If it is happy with a single read, it just returns it so we avoid
-// allocating and copying as happens with ReadBytes().
-// If the string is too big, then we have to allocate space.
-func (scnr *myscanner) readbigslice(delim byte) (line []byte) {
-	line, scnr.err = scnr.bufio_reader.ReadSlice(delim)
-
-	if scnr.err == nil && len(line) > 0 { //  Most common case
-		return //                             Just return
-	}
-
-	if scnr.err == io.EOF {
-		scnr.eof = true
-		scnr.err = nil
-		return
-	}
-
-	if scnr.err == bufio.ErrBufferFull { // Now the nasty case of
-		var r []byte //                     having to do multiple reads
-		r = append(r, line...)
-		line = r
-		var tmp []byte
-		for scnr.err == bufio.ErrBufferFull {
-			line = append(line, tmp...)
-			tmp, scnr.err = scnr.bufio_reader.ReadSlice(delim)
-		}
-		line = append(line, tmp...)
-	}
-	return
-}
-
-// get_next_lump () returns the text corresponding to exactly one sequence,
-// with its comment line and then the actual sequence.
-// Return text up to the next ">" character or EOF.
-// Return true if we are happy.
-func (scnr *myscanner) get_next_lump() bool {
-	scnr.b = scnr.with_nl(cmmt_char)
-	if len(scnr.b) < 2 {
-		if scnr.err == io.EOF {
-			scnr.eof = true
-			scnr.err = nil // Not an error, but tell the caller there is no more data
-		}
-		return false
-	}
-	if scnr.err == io.EOF { // do not signal an error
-		scnr.err = nil // On the next call, we will return no more data.
-		scnr.eof = true
-	}
-	return true
-}
-
-// lump_split takes a lump of characters which should contain a comment,
-// followed by the sequence. The comment is delimited by a newline.
-// The sequence can have any amount of white space in it.
-//
-func lump_split(b []byte, white []bool, scnr *myscanner) (seq seq, err error) {
-	if len(b) < 2 {
-		err = errors.New("lump_split: too short")
-		return
-	}
-	n := bytes.IndexByte(b, '\n')
-	if n < 0 {
-		err = errors.New("lump_split: no newline")
-		return
-	}
-	seq.cmmt = string(bytes.TrimRightFunc(b[:n], unicode.IsSpace))
-	b = b[n+1:] // First byte after the newline
-	nw := 0
-	for _, c := range b {
-		if !white[c] { // Count the number of bytes we need (non-white)
-			nw++
-		}
-	}
-	seq.seq = make([]byte, nw) // This is where we could allocate from a pool
-	i := 0
-	for _, c := range b {
-		if !white[c] {
-			seq.seq[i] = c
-			i++
-		}
-	}
-	if len(seq.seq) < 1 {
-		err = fmt.Errorf("zero length sequence, starting %s", seq.cmmt)
-	}
-	return
-}
-
-// ReadSeqs takes an io.Reader as input and reads sequences in fasta
-// format. It puts its results into the SeqGrp given as a pointer.
-// It is happy with utf-8 in the comments, but not in the sequences.
-// The function will stop reading if it encounters an error.
-func ReadSeqs(fp io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
-	s := newmyscanner(fp)
-	{ //                 Our scanner eats '>' characters, but our
-		var btmp byte // first line has not been through scanner,
-		if btmp, err = s.bufio_reader.ReadByte(); err != nil {
-			return //    so we jump over first character.
-		}
-		if btmp != cmmt_char { // might as well check the file format
-			err = fmt.Errorf("First byte in file was not a comment character")
-			return
-		}
-	}
-
-	var seq_out []seq
-
-	white := [256]bool{cmmt_char: true, //     Set of characters we do not want
-		'\t': true, '\n': true, '\v': true, // in sequences, including the
-		'\f': true, '\r': true, ' ': true} //  comment char '>'
-
-	if !s_opts.Keep_gaps_rd { // Unless we want to keep gaps, we also remove
-		white[GapChar] = true // "-" characters. Treat them as white space
-	}
-
-	nc := 0
-
-	for s.get_next_lump() {
-		nc++
-		var seq seq
-		if s.err != nil {
-			err = fmt.Errorf("reading seq: %v, seq num: %d", s.err, nc)
-			return
-		}
-		if seq, err = lump_split(s.b, white[:], s); err != nil {
-			err = fmt.Errorf("splitting seq error: %v\nSeq num: %d, %s",
-				err, nc, s.b)
-			return
-		}
-		seq_out = append(seq_out, seq)
-	}
-
-	seqgrp.seqs = append(seqgrp.seqs, seq_out...)
-	if s_opts.Keep_gaps_rd {
-		check_lengths(seqgrp.seqs)
-	}
-	return
-}
-
 // check_seq_lengths should only be called if we are keeping
 // gaps. Then we imagine all the sequences are aligned, so they
 // must be the same length.
@@ -508,7 +316,7 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
 
 	defer fp.Close()
 
-	if err := ReadSeqs(fp, seqgrp, s_opts); err != nil {
+	if err := ReadFasta(fp, seqgrp, s_opts); err != nil {
 		return seqgrp, err
 	}
 
