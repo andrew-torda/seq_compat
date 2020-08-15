@@ -6,18 +6,16 @@ import (
 	"strings"
 	"testing"
 
-	
 	"github.com/andrew-torda/seq_compat/pkg/randseq"
 	"github.com/andrew-torda/seq_compat/pkg/seq"
-	
 )
 
-func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
+func benchmarkReadFasta(i int, b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 
 	var sb strings.Builder
-	args := randseq.RandSeqArgs {
+	args := randseq.RandSeqArgs{
 		Wrtr: &sb,
 		Cmmt: "testing seq",
 		Nseq: 2000,
@@ -27,8 +25,7 @@ func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
 		b.Fatal(err)
 	}
 
-	seq.SetFastaRdSize (i)
-
+	seq.SetFastaRdSize(i)
 
 	reader := strings.NewReader(sb.String())
 	s_opts := &seq.Options{
@@ -38,26 +35,25 @@ func benchmarkReadFasta (i int, b *testing.B, oldvers bool) {
 	}
 
 	var seqgrp, junk seq.SeqGrp
-	_ = seq.ReadFasta (strings.NewReader(sb.String()), &junk,  s_opts)
+	_ = seq.ReadFasta(strings.NewReader(sb.String()), &junk, s_opts)
 
 	f := seq.ReadFasta
-	if (oldvers == true) {
-		f = seq.ReadSeqs
-	}
+
 	b.StartTimer()
 	if err := f(reader, &seqgrp, s_opts); err != nil {
 		b.Fatal("Reading seqs failed", err)
 	}
 
-	if seqgrp.GetNSeq() != args.Nseq  { b.Fatalf ("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), args.Nseq, seqgrp.GetLen())}
+	if seqgrp.GetNSeq() != args.Nseq {
+		b.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), args.Nseq, seqgrp.GetLen())
+	}
 }
 
-func Benchmark3 (b *testing.B) { benchmarkReadFasta (3, b, false) }
-func Benchmark4 (b *testing.B) { benchmarkReadFasta (4, b, false) }
-func Benchmark512 (b *testing.B) { benchmarkReadFasta (512, b, false) }
-func Benchmark2k (b *testing.B) { benchmarkReadFasta (2 * 1024, b, false) }
-func Benchmark4k (b *testing.B) { benchmarkReadFasta (4 * 1024, b, false) }
-func Benchmark10k (b *testing.B) { benchmarkReadFasta (10 * 1024, b, false) }
-func Benchmark20k (b *testing.B) { benchmarkReadFasta (20 * 1024, b, false) }
-func Benchmark40k (b *testing.B) { benchmarkReadFasta (40 * 1024, b, false) }
-func BenchmarkOld (b *testing.B) { benchmarkReadFasta (4 * 1024, b, true) }
+func Benchmark3(b *testing.B)   { benchmarkReadFasta(3, b) }
+func Benchmark4(b *testing.B)   { benchmarkReadFasta(4, b) }
+func Benchmark512(b *testing.B) { benchmarkReadFasta(512, b) }
+func Benchmark2k(b *testing.B)  { benchmarkReadFasta(2*1024, b) }
+func Benchmark4k(b *testing.B)  { benchmarkReadFasta(4*1024, b) }
+func Benchmark10k(b *testing.B) { benchmarkReadFasta(10*1024, b) }
+func Benchmark20k(b *testing.B) { benchmarkReadFasta(20*1024, b) }
+func Benchmark40k(b *testing.B) { benchmarkReadFasta(40*1024, b) }
