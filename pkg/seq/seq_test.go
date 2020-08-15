@@ -107,7 +107,7 @@ func writeTest_nospaces(f_tmp io.Writer) {
 	}
 }
 
-func TestBrokenSeq (t *testing.T) {
+func TestBrokenSeq(t *testing.T) {
 	s := `> s1
 abc
 > s2 there is no sequence next`
@@ -118,7 +118,6 @@ abc
 	}
 	print()
 }
-
 
 func TestReadFastaShort(t *testing.T) {
 	set1 := ">\n" + "abcdefghij\n" +
@@ -145,13 +144,13 @@ func TestReadFastaShort(t *testing.T) {
 
 // innerWriteReadSeqs writes and then reads a sequence. It should be called
 // once with spaces and once without.
-func innerWriteReadSeqs(t *testing.T, spaces int) {
+func innerWriteReadSeqs(t *testing.T, spaces bool) {
 	var b strings.Builder
 
 	switch spaces {
-	case no_spaces:
+	case false:
 		writeTest_nospaces(&b)
-	case with_spaces:
+	case true:
 		writeTest_with_spaces(&b)
 	}
 	reader := strings.NewReader(b.String())
@@ -162,23 +161,25 @@ func innerWriteReadSeqs(t *testing.T, spaces int) {
 		Rmv_gaps_wrt: true}
 
 	var seqgrp SeqGrp
-	if err := ReadSeqs(reader, &seqgrp, s_opts); err != nil {
+	if err := ReadFasta(reader, &seqgrp, s_opts); err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
 
 	if seqgrp.GetNSeq() != len(seq_lengths) {
-		t.Fatalf("Wrote %d seqs, but read only %d.\n%s, %d",
+		t.Fatalf("Wrote %d seqs, but read only %d.\n%s, %t",
 			len(seq_lengths), seqgrp.GetNSeq(),
 			"Spaces was set to ", spaces)
 	}
 	for i, s := range seqgrp.GetSeqSlc() {
-		if s.Len() != seq_lengths[i] {
-			t.Fatalf("Seq length expected %d, got %d", seq_lengths[i], s.Len())
+		if !spaces {
+			if s.Len() != seq_lengths[i] {
+				t.Fatalf("Seq length expected %d, got %d", seq_lengths[i], s.Len())
+			}
 		}
 	}
 }
 
-// Check that broken files are gracefully handled
+// TestEmpty checks that broken files are gracefully handled
 func TestEmpty(t *testing.T) {
 	bad_contents := []string{
 		"> blah\n",
@@ -204,11 +205,14 @@ func TestEmpty(t *testing.T) {
 
 }
 
-// TestReadSeqs writes and then reads sequences, and does it once to check that
+// TestReadFasta writes and then reads sequences, and does it once to check that
 // we hop over white space and once to make sure we handle long lines.
-func TestReadSeqs(t *testing.T) {
-	innerWriteReadSeqs(t, no_spaces)
-	innerWriteReadSeqs(t, with_spaces)
+func TestReadFasta(t *testing.T) {
+	spaces := []bool{false, true}
+	for _, tt := range spaces {
+		innerWriteReadSeqs(t, tt)
+		innerWriteReadSeqs(t, tt)
+	}
 }
 
 type testStype struct {
@@ -242,8 +246,8 @@ func TestTypes(t *testing.T) {
 
 	for tnum, x := range stypedata {
 		var seqgrp SeqGrp
-		if err := ReadSeqs(strings.NewReader(x.s1), &seqgrp, s_opts); err != nil {
-			t.Fatal("TestTypes broke on ReadSeqs", err)
+		if err := ReadFasta(strings.NewReader(x.s1), &seqgrp, s_opts); err != nil {
+			t.Fatal("TestTypes broke on ReadFasta", err)
 		}
 		seqgrp.Upper()
 		st := seqgrp.GetType()
@@ -339,7 +343,7 @@ func TestEntropy(t *testing.T) {
 	for tnum, x := range entdata {
 		seqgrp := new(SeqGrp)
 		rdr := strings.NewReader(x.s1)
-		if err := ReadSeqs(rdr, seqgrp, s_opts); err != nil {
+		if err := ReadFasta(rdr, seqgrp, s_opts); err != nil {
 			t.Fatal("Test: ", tnum, err)
 		}
 		seqgrp.Upper()
@@ -375,7 +379,7 @@ DEF`
 	var seqgrp SeqGrp
 
 	rdr := strings.NewReader(set1)
-	if err := ReadSeqs(rdr, &seqgrp, s_opts); err != nil {
+	if err := ReadFasta(rdr, &seqgrp, s_opts); err != nil {
 		t.Fatalf("Reading temp sequences %v", err)
 	}
 	subs := []string{"> some", " some", "some", "seq1"}
