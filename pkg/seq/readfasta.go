@@ -95,10 +95,6 @@ func (l *lexer) next() {
 
 type stateFn func(*lexer) stateFn
 
-func gstart(l *lexer) stateFn {
-	return gstart
-}
-
 // We are reading a sequence
 func gseq(l *lexer) stateFn {
 	item := <-l.ichan
