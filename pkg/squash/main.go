@@ -23,7 +23,7 @@ func MyMain(seqstring, infile, outfile string) int {
 	}
 	var ndxref int
 	if ndxref = seqgrp.FindNdx(seqstring); ndxref == -1 {
-		fmt.Fprintf(os.Stderr, "Could not find \"%s\" amongst sequences\n", seqstring)
+		fmt.Fprintf(os.Stderr, `Could not find "%s" amongst sequences\n`, seqstring)
 		return ExitFailure
 	}
 	seqslc := seqgrp.GetSeqSlc()       // Slice of sequences

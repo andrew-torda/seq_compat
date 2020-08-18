@@ -165,7 +165,7 @@ func trimStr(s string, n int) string {
 // not like (value higher than 128).
 func (seq *seq) Upper() error {
 	const diff = 'a' - 'A'
-	const symerr = "bad sym \"%c\" at position %d starting \"%s\""
+	const symerr = `bad sym "%c" at position %d starting "%s"`
 	s := seq.GetSeq()
 	for i := 0; i < len(s); i++ {
 		c := s[i]
@@ -183,9 +183,8 @@ func (seq *seq) Upper() error {
 }
 
 // Copy
-func (s *seq) Copy() (t seq) {
-	t = *new(seq)
-	t.cmmt = s.cmmt
+func (s *seq) Copy() (seq) {
+	t := seq {cmmt: s.cmmt}
 	t.SetSeq(s.GetSeq())
 	return t
 }

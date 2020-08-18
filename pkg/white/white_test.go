@@ -35,7 +35,7 @@ func testoneversion(f ftest, t *testing.T) {
 		b := []byte(s)
 		f(&b)
 		if string(b) != want {
-			t.Fatalf("white remove broke on \"%s\" got \"%s\"", string(b), ss[i])
+			t.Fatalf(`white remove broke on "%s" got "%s"`, string(b), ss[i])
 		}
 	}
 }

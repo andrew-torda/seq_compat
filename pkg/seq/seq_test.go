@@ -341,9 +341,9 @@ func TestEntropy(t *testing.T) {
 		Rmv_gaps_wrt: false}
 
 	for tnum, x := range entdata {
-		seqgrp := new(SeqGrp)
+		var seqgrp SeqGrp
 		rdr := strings.NewReader(x.s1)
-		if err := ReadFasta(rdr, seqgrp, s_opts); err != nil {
+		if err := ReadFasta(rdr, &seqgrp, s_opts); err != nil {
 			t.Fatal("Test: ", tnum, err)
 		}
 		seqgrp.Upper()
@@ -502,10 +502,10 @@ func TestGetRevmap(t *testing.T) {
 	seqgrp.UsageSite()
 	a := seqgrp.GetRevmap()
 	if len(a) != 3 {
-		t.Fatal("broken length of \"a\"")
+		t.Fatal(`broken length of "a"`)
 	}
 	if a[0] != 'a' {
-		t.Fatal("did not find \"a\" in first place in revmap")
+		t.Fatal(`did not find "a" in first place in revmap`)
 	}
 }
 
@@ -575,7 +575,7 @@ func TestSeqInfo(t *testing.T) {
 		t.Fatal("in whole seq did not find:" + sometext)
 	}
 	if strings.Contains(c, "aa") == false {
-		t.Fatal("in whole seq did not find \"aa\"")
+		t.Fatal(`in whole seq did not find "aa"`)
 	}
 
 	a0.Upper()

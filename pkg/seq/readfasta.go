@@ -5,10 +5,9 @@ package seq
 import (
 	"bytes"
 	"errors"
+	"github.com/andrew-torda/seq_compat/pkg/white"
 	"io"
 	"sync"
-
-	"github.com/andrew-torda/seq_compat/pkg/white"
 )
 
 // An item is terminated by a newline if we are in a comment or a comment
@@ -146,4 +145,24 @@ func ReadFasta(rdr io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
 		l.err = errors.New("No sequences found")
 	}
 	return l.err
+}
+
+// --------------- experimenting ----------------
+//type addSeqFn func ([]Seq, Seq) ()// Adds a sequence to a slice of sequences
+type rdInfo struct {
+	seqSpace []byte // Maybe where we will allocate space for sequences.
+	//	addFn    addSeqFn // The function for adding a new sequence
+	sameLen bool // are all sequences the same length
+}
+
+// setupSeqAlloc sets up for the coming reading of sequences.
+// A tiny trick. We want to store state for the duration of the reading.
+// We could have some variables local to the file, but I would forget
+// them and they hang around.
+// If we stick them in the lexer structure, they will be cleaned up
+// as soon as the lexer goes away.
+// During programming, we can make it a file variable. Later, we can
+// move it into the lexer structure.
+// var rdInfo rdInfo
+func setupSeqAlloc(io.ReadSeeker) {
 }
