@@ -10,32 +10,22 @@ import (
 	"github.com/edsrzf/mmap-go"
 )
 
-// byMmap reads from a file via mmap() and counts ">"
-func byMmap(fname string) (int, error) {
-	var fp *os.File
-	var err error
-	var mm mmap.MMap
-	if fp, err = os.Open(fname); err != nil {
-		return 0, err
-	}
-	defer fp.Close()
-	if mm, err = mmap.Map(fp, mmap.RDONLY, 0); err != nil {
+// byMmap reads from a file pointer via mmap() and counts ">"
+func ByMmap(fp *os.File) (int, error) {
+
+	mm, err := mmap.Map(fp, mmap.RDONLY, 0)
+	if err != nil {
 		return 0, err
 	}
 	defer mm.Unmap()
 	return bytes.Count(mm, []byte(">")), nil
 }
 
-//byReadingFixed reads from a file, piecewise into a buffer and counts ">".
-func byReadingFixed(fname string) (int, error) {
+//ByReading reads from a source, piecewise into a buffer and counts ">".
+func ByReading(fp io.ReadSeeker) (int, error) {
 	const bsize = 64 * 1024
 	var buf [bsize]byte
- 	var fp io.ReadCloser
 	var err error
-	if fp, err = os.Open(fname); err != nil {
-		return 0, err
-	}
-	defer fp.Close()
 	count := 0
 	for n := bsize; n == bsize; {
 		n, err = fp.Read(buf[:])
@@ -43,10 +33,22 @@ func byReadingFixed(fname string) (int, error) {
 			return 0, err
 		}
 		count += bytes.Count(buf[:n], []byte(">"))
+
 	}
+	_, err = fp.Seek(0, io.SeekStart)
+	if err != nil {
+		return 0, err
+	}
+
 	return count, nil
 }
 
-func Main(fname string) (int, error) {
-	return byMmap (fname)
+// FromFile opens a file and returns the number of sequences by counting ">".
+func FromFile(fname string) (int, error) {
+	fp, err := os.Open(fname)
+	if err != nil {
+		return 0, err
+	}
+	defer fp.Close()
+	return ByMmap(fp)
 }
