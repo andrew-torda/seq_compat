@@ -25,7 +25,7 @@ func main() {
 	fname := os.Args[1]
 	var err error
 	var nOccur int
-	if nOccur, err = numseq.Main(fname); err != nil {
+	if nOccur, err = numseq.FromFile(fname); err != nil {
 		log.Fatal (err)
 	}
 	
