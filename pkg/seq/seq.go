@@ -183,8 +183,8 @@ func (seq *seq) Upper() error {
 }
 
 // Copy
-func (s *seq) Copy() (seq) {
-	t := seq {cmmt: s.cmmt}
+func (s *seq) Copy() seq {
+	t := seq{cmmt: s.cmmt}
 	t.SetSeq(s.GetSeq())
 	return t
 }
@@ -301,7 +301,7 @@ sequence %i length: %i. Sequence starts %s"`
 // Readfile takes a filename and reads sequences from it.
 // each in turn. It returns a SeqGrp and error.
 func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
-	var seqgrp = new (SeqGrp)
+	var seqgrp = new(SeqGrp)
 	var err error
 	var fp io.ReadCloser // don't use a file. It could be stdin.
 
@@ -404,9 +404,9 @@ func (seqgrp *SeqGrp) FindNdx(s string) int {
 // sIn is a slice of strings which are the sequences.
 // prefix is an optional argument. Sequences need names/comments. If
 // prefix is not given, sequences will be called "> s1", "> s2", ...
-func Str2SeqGrp(sIn []string, prefix ...string) (*SeqGrp) {
+func Str2SeqGrp(sIn []string, prefix ...string) *SeqGrp {
 	var base string
-	seqgrp := new (SeqGrp)
+	seqgrp := new(SeqGrp)
 	if prefix == nil {
 		base = "s"
 	} else {
