@@ -5,9 +5,12 @@ package seq
 import (
 	"bytes"
 	"errors"
-	"github.com/andrew-torda/seq_compat/pkg/white"
+	"fmt"
 	"io"
 	"sync"
+
+	"github.com/andrew-torda/seq_compat/pkg/numseq"
+	"github.com/andrew-torda/seq_compat/pkg/white"
 )
 
 // An item is terminated by a newline if we are in a comment or a comment
@@ -23,15 +26,18 @@ type item struct {
 }
 
 type lexer struct {
-	input    []byte
-	ichan    chan *item
-	seqgrp   *SeqGrp
-	rdr      io.Reader
-	itempool sync.Pool
-	cmmt     string // partial comment
-	seq      []byte // partial string
-	term     byte
-	err      error
+	input      []byte
+	ichan      chan *item
+	seqgrp     *SeqGrp
+	rdr        io.ReadSeeker
+	itempool   sync.Pool
+	cmmt       string   // partial comment
+	seq        []byte   // partial string
+	term       byte     // terminator of comments or sequences
+	err        error    // error passed back to caller at end
+	DiffLenSeq bool     // are all sequences the same length
+	fAddSeq    addSeqFn // function to be used for adding sequences
+	seqblock   []byte   // Big block where all the sequences are placed
 }
 
 const defaultReadSize = 512
@@ -92,6 +98,41 @@ func (l *lexer) next() {
 	}
 }
 
+// fAppndSeq takes a byte slice and appends it to the slice of byte slices that
+// are the sequences
+func fAppndSeq(l *lexer, s seq) {
+	l.seqgrp.seqs = append(l.seqgrp.seqs, s)
+}
+
+// fAddInBlockSeq takes a byte slice, appends it to our big block and
+// then sets the pointers in the slice of sequences
+func fAddInBlockSeq(l *lexer, s seq) {
+	l.seqblock = append(l.seqblock, s.seq...)
+}
+
+// faddseqfirst // is called when we have the first sequence ready.
+// It then decides if future sequences should be added by fAppndSeq (simply
+// appending them) or by fBlockSeq which first allocates a block of sequences.
+func fAddSeqFirst(l *lexer, s seq) {
+	fmt.Println("in faddseqfirst")
+	if l.DiffLenSeq {
+		l.fAddSeq = fAppndSeq
+		fAppndSeq(l, s)
+		return
+	}
+	//  We now get to do the fancier, memory saving allocation.
+	fmt.Println("add function for subsequent sequences")
+	nseq, err := numseq.ByReading(l.rdr)
+	if err != nil {
+		l.err = err
+		return
+	}
+	lenseq := len(s.seq)
+	l.seqblock = make([]byte, 0, lenseq*nseq)
+	l.fAddSeq = fAddInBlockSeq
+	fAddInBlockSeq(l, s)
+}
+
 type stateFn func(*lexer) stateFn
 
 // We are reading a sequence
@@ -104,12 +145,15 @@ func gseq(l *lexer) stateFn {
 
 	white.Remove(&item.data)
 	l.seq = append(l.seq, item.data...)
+
 	if item.complete {
 		if len(l.seq) == 0 {
 			l.err = errors.New("Zero length sequence after" + l.cmmt)
 		}
 		seq := seq{cmmt: l.cmmt, seq: l.seq}
-		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
+		//		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
+		//		fAppndSeq(l, seq)
+		l.fAddSeq(l, seq)
 		l.cmmt = ""
 		l.seq = nil
 		return gcmmt
@@ -134,8 +178,11 @@ func gcmmt(l *lexer) stateFn {
 }
 
 // ReadFasta reads fasta formatted files.
-func ReadFasta(rdr io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
-	l := lexer{rdr: rdr, ichan: make(chan *item, 2), seqgrp: seqgrp, term: NL}
+func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
+	l := lexer{
+		rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL,
+		DiffLenSeq: s_opts.DiffLenSeq, fAddSeq: fAddSeqFirst,
+	}
 
 	go l.next()
 	for state := gcmmt; state != nil; {
@@ -148,11 +195,11 @@ func ReadFasta(rdr io.Reader, seqgrp *SeqGrp, s_opts *Options) (err error) {
 }
 
 // --------------- experimenting ----------------
-//type addSeqFn func ([]Seq, Seq) ()// Adds a sequence to a slice of sequences
+type addSeqFn func(*lexer, seq) // Adds a sequence to a slice of sequences
 type rdInfo struct {
-	seqSpace []byte // Maybe where we will allocate space for sequences.
-	//	addFn    addSeqFn // The function for adding a new sequence
-	sameLen bool // are all sequences the same length
+	seqSpace []byte   // Maybe where we will allocate space for sequences.
+	addFn    addSeqFn // The function for adding a new sequence
+	sameLen  bool     // are all sequences the same length
 }
 
 // setupSeqAlloc sets up for the coming reading of sequences.
@@ -163,6 +210,19 @@ type rdInfo struct {
 // as soon as the lexer goes away.
 // During programming, we can make it a file variable. Later, we can
 // move it into the lexer structure.
-// var rdInfo rdInfo
-func setupSeqAlloc(io.ReadSeeker) {
+/*
+var rdInf rdInfo
+
+func setupSeqAlloc(rdr io.ReadSeeker, s_opts *Options) error {
+	if s_opts.DiffLenSeq { // Sequences have different lengths. Just use
+		return nil //            default append operation
+	}
+	nseq, err := numseq.ByReading(rdr)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(os.Stderr, "setup alloc thinks there are", nseq, "sequences")
+	return nil
 }
+*/
