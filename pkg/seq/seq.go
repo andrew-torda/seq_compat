@@ -303,19 +303,20 @@ sequence %i length: %i. Sequence starts %s"`
 func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
 	var seqgrp = new(SeqGrp)
 	var err error
-	var fp io.ReadCloser // don't use a file. It could be stdin.
+	var rdr io.ReadSeeker // don't use a file. It could be stdin.
 
 	if fname != "" {
-		if fp, err = os.Open(fname); err != nil {
+		if fp, err := os.Open(fname); err != nil {
 			return nil, err
+		} else {
+			defer fp.Close()
+			rdr = fp // Only promise a readseeker to the rest of the code
 		}
 	} else {
-		fp = os.Stdin
+		rdr = os.Stdin
 	}
 
-	defer fp.Close()
-
-	if err := ReadFasta(fp, seqgrp, s_opts); err != nil {
+	if err := ReadFasta(rdr, seqgrp, s_opts); err != nil {
 		return seqgrp, err
 	}
 
