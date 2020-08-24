@@ -21,21 +21,25 @@ func ByMmap(fp *os.File) (int, error) {
 	return bytes.Count(mm, []byte(">")), nil
 }
 
-//ByReading reads from a source, piecewise into a buffer and counts ">".
-func ByReading(fp io.ReadSeeker) (int, error) {
+// ByReading reads from a source, piecewise into a buffer and counts ">".
+// It puts the file offset back to wherever it was at the start.
+func ByReading(rdr io.ReadSeeker) (int, error) {
 	const bsize = 64 * 1024
 	var buf [bsize]byte
-	var err error
+	iniOffset, err := rdr.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return 0, err
+	}
 	count := 0
 	for n := bsize; n == bsize; {
-		n, err = fp.Read(buf[:])
+		n, err = rdr.Read(buf[:])
 		if err != nil && err != io.EOF {
 			return 0, err
 		}
 		count += bytes.Count(buf[:n], []byte(">"))
 
 	}
-	_, err = fp.Seek(0, io.SeekStart)
+	_, err = rdr.Seek(iniOffset, io.SeekStart)
 	if err != nil {
 		return 0, err
 	}
