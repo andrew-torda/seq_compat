@@ -30,6 +30,9 @@ func ByReading(rdr io.ReadSeeker) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if _, err = rdr.Seek (0, io.SeekStart); err != nil {
+		return 0, err
+	}
 	count := 0
 	for n := bsize; n == bsize; {
 		n, err = rdr.Read(buf[:])
