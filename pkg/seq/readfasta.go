@@ -41,7 +41,7 @@ type lexer struct {
 	notfirst   bool   // Not the first call
 }
 
-const defaultReadSize = 2 * 1024
+const defaultReadSize = 4 * 1024
 
 var rdsize int = defaultReadSize
 
@@ -60,24 +60,38 @@ func newItem() interface{} { return new(item) }
 // next reads from the input and sends an item to channel, ichan.
 // An item is terminated by l.term, or the end of the buffer or
 // end of input.
+// Use a pair of buffers for reading. When one is being filled, the other might
+// be processed by the comment or sequence reading function.
 func (l *lexer) next() {
 	l.itempool.New = newItem
+	backbuf1 := make([]byte, rdsize)
+	backbuf2 := make([]byte, rdsize)
+
+	curbuf := &backbuf2
 	for {
 		item := l.itempool.Get().(*item)
 		if len(l.input) == 0 {
-			l.input = make([]byte, rdsize)
-			if n, err := l.rdr.Read(l.input); n != rdsize {
-				if n == 0 {
+			if curbuf == &backbuf1 {
+				curbuf = &backbuf2
+			} else {
+				curbuf = &backbuf1
+			}
+			l.input = (*curbuf)[:]
+			if n, err := l.rdr.Read(l.input); n != rdsize { // rdsize
+				l.input = l.input[:n]
+				if n == 0 { // really finished
 					if err != nil && err != io.EOF {
 						l.err = err // Real error (not EOF) occurred.
 					}
-					item.data = []byte("")
+					item.data = nil
 					item.complete = true
 					l.ichan <- item // we have to flush
 					close(l.ichan)
 					return
-				} else { //                Partial read. EOF, not an error
-					l.input[n] = l.term // Add terminator
+				} else { // Partial read. EOF, not an error
+					if l.input[n-1] != l.term {
+						l.input = append(l.input, l.term) // Add terminator
+					}
 				}
 			}
 		}
@@ -152,7 +166,7 @@ func seqFn(l *lexer) stateFn {
 		} else {
 			nlen := len(l.seqblock)
 			if l.expLen != len(l.seq) {
-				l.err = fmt.Errorf ("seqs not same length, wanted %d, got %d", l.expLen, len(l.seq))
+				l.err = fmt.Errorf("seqs not same length, wanted %d, got %d", l.expLen, len(l.seq))
 				return nil
 			}
 			l.seqblock = l.seqblock[:nlen+len(l.seq)]
