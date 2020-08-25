@@ -202,6 +202,24 @@ func TestEmpty(t *testing.T) {
 
 }
 
+// TestErrorOnDiffSeqs should provoke the error when we expect sequences
+// to be the same length, but they are not.
+func TestErrorOnDiffSeqs(t *testing.T) {
+	texts := []string{
+		"> seq1\naaaa\n> seq 2\naaaaa",
+		"> seq1\naaaaa\n> seq 2\naaaa",
+	}
+
+	var seqgrp SeqGrp
+	var s_opts = &Options{DiffLenSeq: false}
+	for _, txt := range texts {
+		rdr := strings.NewReader(txt)
+		if err := ReadFasta(rdr, &seqgrp, s_opts); err == nil {
+			t.Fatal("Should provoke error on uneven sequences")
+		}
+	}
+}
+
 // TestReadFasta writes and then reads sequences, and does it once to check that
 // we hop over white space and once to make sure we handle long lines.
 func TestReadFasta(t *testing.T) {
