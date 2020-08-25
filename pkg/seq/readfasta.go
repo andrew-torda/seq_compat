@@ -5,7 +5,6 @@ package seq
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"sync"
 
@@ -31,20 +30,21 @@ type lexer struct {
 	seqgrp     *SeqGrp
 	rdr        io.ReadSeeker
 	itempool   sync.Pool
-	cmmt       string   // partial comment
-	seq        []byte   // partial string
-	term       byte     // terminator of comments or sequences
-	err        error    // error passed back to caller at end
-	DiffLenSeq bool     // are all sequences the same length
-	fAddSeq    addSeqFn // function to be used for adding sequences
-	seqblock   []byte   // Big block where all the sequences are placed
+	cmmt       string // partial comment
+	seq        []byte // partial string
+	err        error  // error passed back to caller at end
+	seqblock   []byte // Big block where all the sequences are placed
+	term       byte   // terminator of comments or sequences
+	diffLenSeq bool   // are all sequences the same length ?
+	notfirst   bool   // Not the first call
 }
 
-const defaultReadSize = 512
+const defaultReadSize = 2 * 1024
 
 var rdsize int = defaultReadSize
 
-// setFastaRdSize is only used during benchmarking
+// setFastaRdSize is only used during benchmarking to see the effect of
+// buffer size.
 func setFastaRdSize(i int) {
 	if i <= 2 {
 		panic("setFastaRdSize given buffer length of 2 or less")
@@ -52,6 +52,7 @@ func setFastaRdSize(i int) {
 	rdsize = i
 }
 
+// NewItem is used by sync.pool.
 func newItem() interface{} { return new(item) }
 
 // next reads from the input and sends an item to channel, ichan.
@@ -66,28 +67,27 @@ func (l *lexer) next() {
 			if n, err := l.rdr.Read(l.input); n != rdsize {
 				if n == 0 {
 					if err != nil && err != io.EOF {
-						l.err = err // signal that a real error occurred.
+						l.err = err // Real error (not EOF) occurred.
 					}
 					item.data = []byte("")
 					item.complete = true
 					l.ichan <- item // we have to flush
 					close(l.ichan)
 					return
-				} else { // Partial read. EOF, not an error
+				} else { //                Partial read. EOF, not an error
 					l.input[n] = l.term // Add terminator
 				}
 			}
 		}
 
 		if ndx := bytes.IndexByte(l.input, l.term); ndx == -1 {
-			item.data = l.input // no terminator found, so just send
+			item.data = l.input // No terminator found. Just send
 			l.input = nil       // back whatever we have in the buffer.
 			item.complete = false
-		} else { //                                We did find a terminator
-			newlInput := l.input[ndx+1:] //        Advance pointer
-			item.data = l.input[:ndx]    //
-			item.complete = true         //
-			l.input = newlInput          //        Set up for next loop
+		} else { //                         We did find a terminator
+			item.data = l.input[:ndx]
+			item.complete = true
+			l.input = l.input[ndx+1:] // Set up for next loop
 			if l.term == NL {
 				l.term = cmmtChar
 			} else {
@@ -98,71 +98,68 @@ func (l *lexer) next() {
 	}
 }
 
-// fAppndSeq takes a byte slice and appends it to the slice of byte slices that
-// are the sequences
-func fAppndSeq(l *lexer, s seq) {
-	l.seqgrp.seqs = append(l.seqgrp.seqs, s)
-}
-
-// fAddInBlockSeq takes a byte slice, appends it to our big block and
-// then sets the pointers in the slice of sequences
-func fAddInBlockSeq(l *lexer, s seq) {
-	l.seqblock = append(l.seqblock, s.seq...)
-}
-
-// faddseqfirst // is called when we have the first sequence ready.
-// It then decides if future sequences should be added by fAppndSeq (simply
-// appending them) or by fBlockSeq which first allocates a block of sequences.
-func fAddSeqFirst(l *lexer, s seq) {
-	fmt.Println("in faddseqfirst")
-	if l.DiffLenSeq {
-		l.fAddSeq = fAppndSeq
-		fAppndSeq(l, s)
-		return
-	}
-	//  We now get to do the fancier, memory saving allocation.
-	fmt.Println("add function for subsequent sequences")
-	nseq, err := numseq.ByReading(l.rdr)
-	if err != nil {
+// firstCall is called when we have read up the first sequence and can
+// allocate all the space we need.
+func firstCall(l *lexer) {
+	nseq, err := numseq.ByReading(l.rdr) // Swap to fancier version with
+	if err != nil {                      // better memory allocation
 		l.err = err
 		return
 	}
-	lenseq := len(s.seq)
+	if nseq < 1 {
+		l.err = errors.New("no sequences found")
+		return
+	}
+	lenseq := len(l.seq)
 	l.seqblock = make([]byte, 0, lenseq*nseq)
-	l.fAddSeq = fAddInBlockSeq
-	fAddInBlockSeq(l, s)
 }
 
 type stateFn func(*lexer) stateFn
 
-// We are reading a sequence
-func gseq(l *lexer) stateFn {
+// seqFn is used to build up a sequence (not comment) and store it when complete.
+// On the first call, we check if the sequences should be of the same length.
+// If so, we allocate a single large block for sequences.
+func seqFn(l *lexer) stateFn {
 	item := <-l.ichan
-	defer l.itempool.Put(item)
+
 	if item == nil || l.err != nil {
 		return nil
 	}
 
 	white.Remove(&item.data)
 	l.seq = append(l.seq, item.data...)
-
-	if item.complete {
+	complete := item.complete
+	l.itempool.Put(item)
+	if complete {
 		if len(l.seq) == 0 {
 			l.err = errors.New("Zero length sequence after" + l.cmmt)
+			return nil
 		}
-		seq := seq{cmmt: l.cmmt, seq: l.seq}
-		//		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
-		//		fAppndSeq(l, seq)
-		l.fAddSeq(l, seq)
+		if !l.notfirst && !l.diffLenSeq { // on first sequence
+			var tmp []byte
+			l.notfirst = true
+			firstCall(l)
+			tmp = append(tmp, l.seq...)
+			l.seq = l.seqblock
+			l.seq = append(l.seq, tmp...)
+		}
+		seq := seq{cmmt: l.cmmt, seq : l.seq}
+		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
 		l.cmmt = ""
-		l.seq = nil
-		return gcmmt
+		if l.seqblock == nil { // Not using single block for sequences
+			l.seq = nil
+		} else {
+			nlen := len(l.seqblock)
+			l.seqblock = l.seqblock[:nlen+len(l.seq)]
+			l.seq = l.seqblock[len(l.seqblock):]
+		}
+		return cmmtFn
 	}
-	return gseq
+	return seqFn
 }
 
-// We are reading a comment
-func gcmmt(l *lexer) stateFn {
+// cmmtFn is used to build a function or save it when complete.
+func cmmtFn(l *lexer) stateFn {
 	item := <-l.ichan
 	defer l.itempool.Put(item)
 	if item == nil || l.err != nil {
@@ -172,20 +169,20 @@ func gcmmt(l *lexer) stateFn {
 	l.cmmt = l.cmmt + string(item.data)
 	if item.complete {
 		item.complete = false
-		return gseq
+		return seqFn
 	}
-	return gcmmt
+	return cmmtFn
 }
 
 // ReadFasta reads fasta formatted files.
 func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	l := lexer{
 		rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL,
-		DiffLenSeq: s_opts.DiffLenSeq, fAddSeq: fAddSeqFirst,
+		diffLenSeq: s_opts.DiffLenSeq,
 	}
 
 	go l.next()
-	for state := gcmmt; state != nil; {
+	for state := cmmtFn; state != nil; {
 		state = state(&l)
 	}
 	if seqgrp.GetNSeq() == 0 {
@@ -193,36 +190,3 @@ func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	}
 	return l.err
 }
-
-// --------------- experimenting ----------------
-type addSeqFn func(*lexer, seq) // Adds a sequence to a slice of sequences
-type rdInfo struct {
-	seqSpace []byte   // Maybe where we will allocate space for sequences.
-	addFn    addSeqFn // The function for adding a new sequence
-	sameLen  bool     // are all sequences the same length
-}
-
-// setupSeqAlloc sets up for the coming reading of sequences.
-// A tiny trick. We want to store state for the duration of the reading.
-// We could have some variables local to the file, but I would forget
-// them and they hang around.
-// If we stick them in the lexer structure, they will be cleaned up
-// as soon as the lexer goes away.
-// During programming, we can make it a file variable. Later, we can
-// move it into the lexer structure.
-/*
-var rdInf rdInfo
-
-func setupSeqAlloc(rdr io.ReadSeeker, s_opts *Options) error {
-	if s_opts.DiffLenSeq { // Sequences have different lengths. Just use
-		return nil //            default append operation
-	}
-	nseq, err := numseq.ByReading(rdr)
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintln(os.Stderr, "setup alloc thinks there are", nseq, "sequences")
-	return nil
-}
-*/
