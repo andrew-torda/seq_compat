@@ -117,7 +117,7 @@ func TestReadFastaShort(t *testing.T) {
 	set1 := ">\n" + "abcdefghij\n" +
 		"> longer comment" + strings.Repeat(" x", 300) + "\n" +
 		strings.Repeat("a", 10) + "\n" + "> longer comment" + strings.Repeat(" x", 3) +
-		"\n" + strings.Repeat(" a ", 10) + strings.Repeat(" ", 167)
+		"\n" + strings.Repeat(" b ", 10) + strings.Repeat(" ", 167)
 	bsize := []int{3, 4, 5, 10, 100, 512}
 
 	for i, bs := range bsize {
