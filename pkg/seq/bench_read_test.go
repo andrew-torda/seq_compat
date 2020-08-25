@@ -37,10 +37,10 @@ func benchmarkReadFasta(i int, b *testing.B) {
 	var seqgrp, junk seq.SeqGrp
 	_ = seq.ReadFasta(strings.NewReader(sb.String()), &junk, s_opts)
 
-	f := seq.ReadFasta
+	
 
 	b.StartTimer()
-	if err := f(reader, &seqgrp, s_opts); err != nil {
+	if err := seq.ReadFasta(reader, &seqgrp, s_opts); err != nil {
 		b.Fatal("Reading seqs failed", err)
 	}
 
