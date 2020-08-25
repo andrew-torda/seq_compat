@@ -21,20 +21,7 @@ const (
 
 var seq_lengths = []int{10, 30, bigminus1, big, bigplus1}
 
-// Put funny characters into the comment lines
-var trickyComments = []string{
-	">a☺b☻c☹d",
-	">>>",
-	">",
-	">a comment can end in an umlautÜ",
-}
-
-const (
-	no_spaces = iota
-	with_spaces
-)
-
-// This is to track down a specific bug I have
+// This is to track down a specific bug I had
 func TestFastaBug(t *testing.T) {
 	const nseq = 5
 	const sLen = 16
@@ -47,7 +34,6 @@ func TestFastaBug(t *testing.T) {
 		sb += "\n"
 	}
 
-	//	fmt.Println("here are the seqs in testfastabug\n", sb)
 	SetFastaRdSize(200)
 
 	s_opts := &Options{
@@ -56,20 +42,27 @@ func TestFastaBug(t *testing.T) {
 		Rmv_gaps_wrt: true,
 	}
 
-	var seqgrp, junk SeqGrp
-	if err := ReadFasta(strings.NewReader(sb), &junk, s_opts); err != nil {
-		t.Fatal("Reading into &junk", err)
-	}
-
-	f := ReadFasta
-
-	if err := f(strings.NewReader(sb), &seqgrp, s_opts); err != nil {
+	var seqgrp SeqGrp
+	if err := ReadFasta(strings.NewReader(sb), &seqgrp, s_opts); err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
 	if seqgrp.GetNSeq() != nseq {
 		t.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), nseq, seqgrp.GetLen())
 	}
 
+}
+
+const (
+	no_spaces = iota
+	with_spaces
+)
+
+// Put funny characters into the comment lines
+var trickyComments = []string{
+	">a☺b☻c☹d",
+	">>>",
+	">",
+	">a comment can end in an umlautÜ",
 }
 
 // writeTest_with_spaces provides some sequences with different patterns of
@@ -119,10 +112,12 @@ abc
 	print()
 }
 
+// TestReadFastashort uses buffers of various lengths to catch end of buffer mistakes.
 func TestReadFastaShort(t *testing.T) {
 	set1 := ">\n" + "abcdefghij\n" +
-		"> longer comment" + strings.Repeat(" x", 300) + "\n" + strings.Repeat("a", 10) + "\n" +
-		"> longer comment" + strings.Repeat(" x", 3) + "\n" + strings.Repeat(" a ", 10) + strings.Repeat(" ", 167)
+		"> longer comment" + strings.Repeat(" x", 300) + "\n" +
+		strings.Repeat("a", 10) + "\n" + "> longer comment" + strings.Repeat(" x", 3) +
+		"\n" + strings.Repeat(" a ", 10) + strings.Repeat(" ", 167)
 	bsize := []int{3, 4, 5, 10, 100, 512}
 
 	for i, bs := range bsize {
@@ -131,7 +126,7 @@ func TestReadFastaShort(t *testing.T) {
 		s_opts := &Options{}
 		SetFastaRdSize(bs)
 		if err := ReadFasta(rdr, &seqgrp, s_opts); err != nil {
-			t.Fatal("ReadFasta broken")
+			t.Fatal(err)
 		}
 		if n := seqgrp.GetLen(); n != 10 {
 			t.Fatal("seq num", i, "got", seqgrp.GetLen(), "want 10")
@@ -158,7 +153,9 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 	s_opts := &Options{
 		Vbsty: 0, Keep_gaps_rd: false,
 		Dry_run:      true,
-		Rmv_gaps_wrt: true}
+		Rmv_gaps_wrt: true,
+		DiffLenSeq:   true,
+	}
 
 	var seqgrp SeqGrp
 	if err := ReadFasta(reader, &seqgrp, s_opts); err != nil {
@@ -242,6 +239,7 @@ func TestTypes(t *testing.T) {
 		Vbsty: 0, Keep_gaps_rd: false,
 		Dry_run:      true,
 		Rmv_gaps_wrt: true,
+		DiffLenSeq:   true,
 	}
 
 	for tnum, x := range stypedata {
