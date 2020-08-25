@@ -5,6 +5,7 @@ package seq
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 
@@ -32,8 +33,9 @@ type lexer struct {
 	itempool   sync.Pool
 	cmmt       string // partial comment
 	seq        []byte // partial string
-	err        error  // error passed back to caller at end
 	seqblock   []byte // Big block where all the sequences are placed
+	err        error  // error passed back to caller at end
+	expLen     int    // Expected length of sequences. If zero, not used.
 	term       byte   // terminator of comments or sequences
 	diffLenSeq bool   // are all sequences the same length ?
 	notfirst   bool   // Not the first call
@@ -110,8 +112,8 @@ func firstCall(l *lexer) {
 		l.err = errors.New("no sequences found")
 		return
 	}
-	lenseq := len(l.seq)
-	l.seqblock = make([]byte, 0, lenseq*nseq)
+	l.expLen = len(l.seq)
+	l.seqblock = make([]byte, 0, l.expLen*nseq)
 }
 
 type stateFn func(*lexer) stateFn
@@ -121,7 +123,6 @@ type stateFn func(*lexer) stateFn
 // If so, we allocate a single large block for sequences.
 func seqFn(l *lexer) stateFn {
 	item := <-l.ichan
-
 	if item == nil || l.err != nil {
 		return nil
 	}
@@ -143,13 +144,17 @@ func seqFn(l *lexer) stateFn {
 			l.seq = l.seqblock
 			l.seq = append(l.seq, tmp...)
 		}
-		seq := seq{cmmt: l.cmmt, seq : l.seq}
+		seq := seq{cmmt: l.cmmt, seq: l.seq}
 		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
 		l.cmmt = ""
 		if l.seqblock == nil { // Not using single block for sequences
 			l.seq = nil
 		} else {
 			nlen := len(l.seqblock)
+			if l.expLen != len(l.seq) {
+				l.err = fmt.Errorf ("seqs not same length, wanted %d, got %d", l.expLen, len(l.seq))
+				return nil
+			}
 			l.seqblock = l.seqblock[:nlen+len(l.seq)]
 			l.seq = l.seqblock[len(l.seqblock):]
 		}
