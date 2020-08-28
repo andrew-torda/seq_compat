@@ -13,10 +13,13 @@ import (
 )
 
 func main() {
+	uStr := "usage: randseqs [options] nseq nlen\n...output is written to stdout"
 	f := flag.NewFlagSet("randseq", flag.ExitOnError)
 	const iseed int64 = 1637
 	var args randseq.RandSeqArgs
-
+	{
+		f.Usage = func () {fmt.Println(uStr); f.PrintDefaults()}
+	}
 	f.BoolVar(&args.NoGap, "g", false, "do not put gaps in sequences")
 	f.BoolVar(&args.MkErr, "e", false, "provoke errors")
 	f.Int64Var(&args.Iseed, "r", iseed, "random number seed")
@@ -25,7 +28,7 @@ func main() {
 		os.Exit(ExitUsageError)
 	}
 	if f.NArg() != 3 {
-		fmt.Fprintln(f.Output(), "Too few args\nrandseq [..] file nseq length")
+		fmt.Fprintln(f.Output(), "Too few args")
 		f.Usage()
 		
 		os.Exit(ExitUsageError)
