@@ -12,9 +12,8 @@
 	
 package white
 
-// Remove acts on a pointer to a byte slice, in place and removes all the white
-// space.
-
+// Remove acts on a pointer to a byte slice, in place and removes all the
+// white space.
 func Remove(sIn *[]byte) {
 	var asciiSpace = [256]bool{
 		0: true, '\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
@@ -39,7 +38,9 @@ func Remove(sIn *[]byte) {
 	*sIn = s[:i] // This is the truncation
 }
 
-
+// removeWithBlocks does the same as Remove and has the same signature.
+// It is an alternative which might be faster if you have relatively little
+// white space.
 func removeWithBlocks(sIn *[]byte) {
 	var asciiSpace = [256]bool{
 		0: true, '\t': true, '\n': true, '\v': true, '\f': true, '\r': true, ' ': true,
