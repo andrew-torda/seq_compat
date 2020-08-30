@@ -5,12 +5,14 @@ package kl
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math"
+	"os"
 	"sync"
 
+	"github.com/andrew-torda/matrix"
 	"github.com/andrew-torda/seq_compat/pkg/seq"
 	"github.com/andrew-torda/seq_compat/pkg/seq/common"
-	"github.com/andrew-torda/matrix"
 )
 
 // CmdFlag is literally command line flags after parsing
@@ -89,7 +91,6 @@ func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 		return
 	}
 	seqgrp.Upper()
-
 
 	seqgrp.SetSymUsed(nil, symSync)
 	*err = getSeqX(seqgrp, seqX, flags)
@@ -262,10 +263,25 @@ func calcInner(seqXP, seqXQ SeqX) (klP, klQ, entropyP, entropyQ, cosSim []float3
 	return klP, klQ, entropyP, entropyQ, cosSim
 }
 
+type numResults struct {
+	klP, klQ, entropyP, entropyQ, cosSim []float32
+}
+
+// writeKl writes the results to a file
+func writeKl(wrtr io.WriteCloser, numresults *numResults, offset int) {
+	heading := `"res num", "klP", "klQ", "S_p", "S_q", "cosine sim"`
+	fmt.Fprintln(wrtr, heading)
+	for i := range numresults.klP {
+		fmt.Fprintf(wrtr, "%d %g %g %g %g %g\n", i+1+offset,
+			numresults.klP, numresults.klQ,
+			numresults.entropyP, numresults.entropyQ, numresults.cosSim)
+	}
+}
+
 // Mymain is the main function for kullback-leibler distance
 func Mymain(flags *CmdFlag, fileP, fileQ, outfile string) (err error) {
 	var seqXP, seqXQ SeqX
-
+	var wrtr io.WriteCloser
 	if err := readtwofiles(flags, fileP, fileQ, &seqXP, &seqXQ); err != nil {
 		return err
 	}
@@ -274,6 +290,20 @@ func Mymain(flags *CmdFlag, fileP, fileQ, outfile string) (err error) {
 	}
 
 	klP, klQ, entropyP, entropyQ, cosSim := calcInner(seqXP, seqXQ)
-	print(klP, klQ, entropyP, entropyQ, cosSim)
+	if outfile == "" || outfile == "-" {
+		wrtr = os.Stdout
+	} else {
+		fp, err := os.Create("outfile")
+		if err != nil {
+			return err
+		}
+		defer fp.Close()
+		wrtr = fp
+	}
+	numresults := &numResults{
+		klP: klP, klQ: klQ, entropyP: entropyP, entropyQ: entropyQ, cosSim: cosSim,
+	}
+	writeKl(wrtr, numresults, flags.Offset)
+
 	return nil
 }
