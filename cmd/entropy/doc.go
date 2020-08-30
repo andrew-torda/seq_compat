@@ -1,6 +1,7 @@
 // 27 april 2020
 
 /*
+
 Entropy calculates sequence entropy from a multiple sequence alignment.
 If given a reference sequence, it will also calculate the probability of finding
 that sequence's residue at a particular position.
