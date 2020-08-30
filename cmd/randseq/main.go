@@ -17,9 +17,7 @@ func main() {
 	f := flag.NewFlagSet("randseq", flag.ExitOnError)
 	const iseed int64 = 1637
 	var args randseq.RandSeqArgs
-	{
-		f.Usage = func () {fmt.Println(uStr); f.PrintDefaults()}
-	}
+	f.Usage = func () {fmt.Println(uStr); f.PrintDefaults()}
 	f.BoolVar(&args.NoGap, "g", false, "do not put gaps in sequences")
 	f.BoolVar(&args.MkErr, "e", false, "provoke errors")
 	f.Int64Var(&args.Iseed, "r", iseed, "random number seed")
