@@ -4,8 +4,8 @@
 //   read up two alignments
 //   calculate kullback-leibler divergence for p against q, then q against p
 //   Write out a long list
-//     kl_pq, kl_qp, entropy p, entropy q, dot-product, jensen-blah distance,
-// If we code this carefully, we can re-use the existing entropy code.
+//     kl_pq, kl_qp, entropy p, entropy q, cosine similarity
+
 
 package main
 
