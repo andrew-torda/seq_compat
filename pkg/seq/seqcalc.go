@@ -18,23 +18,7 @@ const (
 )
 
 type SymSync struct {
-	Once  sync.Once
 	UChan chan [MaxSym]bool
-}
-
-// mergelists merges two lists of symbols that have been
-// used. It reads each list from a channel, merges them
-// and returns the merged list, which will have overwritten
-// the first list it received.
-func mergelists(uChan chan [MaxSym]bool) {
-	a1, a2 := <-uChan, <-uChan
-	for i := range a1 {
-		a1[i] = a1[i] || a2[i]
-	}
-
-	uChan <- a1
-	uChan <- a1
-	close(uChan)
 }
 
 // SetSymUsed fills out the bool slice which says whether or not a
@@ -43,7 +27,7 @@ func mergelists(uChan chan [MaxSym]bool) {
 // two seqgrp's, then the symbols used in group A should also be
 // marked used in group B and vice versa. If we get a second varadic
 // argument, it is a channel to be used in combining.
-func (seqgrp *SeqGrp) SetSymUsed(wg *sync.WaitGroup, symSync ...*SymSync) {
+func (seqgrp *SeqGrp) SetSymUsed(wg *sync.WaitGroup, uchan ...chan [MaxSym]bool) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -53,10 +37,9 @@ func (seqgrp *SeqGrp) SetSymUsed(wg *sync.WaitGroup, symSync ...*SymSync) {
 			seqgrp.symUsed[c] = true
 		}
 	}
-	if symSync != nil {
-		go symSync[0].Once.Do(func() { mergelists(symSync[0].UChan) })
-		symSync[0].UChan <- seqgrp.symUsed
-		seqgrp.symUsed = <-symSync[0].UChan
+	if uchan != nil {
+		uchan[0] <- seqgrp.symUsed
+		seqgrp.symUsed = <-uchan[0]
 	}
 	seqgrp.usedKnwn = true
 }
