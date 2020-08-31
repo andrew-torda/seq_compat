@@ -40,7 +40,7 @@ func (seqx *SeqX) GetLen() int { return seqx.len }
 // seqX gets the relevant information for KL calculation from a sequence
 // group. It only goes into its own function so it can be called
 // during testing.
-func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
+func extractSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	var err error
 	var gapsAreChars = false
 
@@ -64,19 +64,17 @@ func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 // non-zero waitgroup, he knows to call wg.Done().
 // The foreground process gets a nil pointer.
 func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
-	wg *sync.WaitGroup, symSync *seq.SymSync) {
+	wg *sync.WaitGroup, uchan chan[seq.MaxSym]bool) {
 	bailout := func() {
 		var junk [seq.MaxSym]bool
-		symSync.UChan <- junk
+		uchan <- junk
 	}
 	if wg != nil { // Only use the wait group for the
 		defer wg.Done() // background goroutine.
 	}
 
 	s_opts := &seq.Options{
-		Vbsty: 0, Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		Keep_gaps_rd: true,
 	}
 
 	seqgrp, e := seq.Readfile(infile, s_opts)
@@ -92,21 +90,35 @@ func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 	}
 	seqgrp.Upper()
 
-	seqgrp.SetSymUsed(nil, symSync)
-	*err = getSeqX(seqgrp, seqX, flags)
+	seqgrp.SetSymUsed(nil, uchan)
+	*err = extractSeqX(seqgrp, seqX, flags)
+}
+// mergelists merges two lists of symbols that have been
+// used. It reads each list from a channel, merges them
+// and returns the merged list, which will have overwritten
+// the first list it received.
+func mergelists(uChan chan [seq.MaxSym]bool) {
+	a1, a2 := <-uChan, <-uChan
+	for i := range a1 {
+		a1[i] = a1[i] || a2[i]
+	}
+
+	uChan <- a1
+	uChan <- a1
+	close(uChan)
 }
 
 // readtwofiles reads the two input sequence files. One of them will
 // be read in the background. We use a waitgroup for synchronising.
-func readtwofiles(flags *CmdFlag, file1, file2 string,
-	seqXP, seqXQ *SeqX) error {
+func readtwofiles(flags *CmdFlag, file1, file2 string, seqXP, seqXQ *SeqX) error {
 	var err1, err2 error
 	var wg sync.WaitGroup
-	var once sync.Once
-	symSync := seq.SymSync{Once: once, UChan: make(chan [seq.MaxSym]bool)}
+
+	uchan := make(chan[seq.MaxSym]bool)
+    go mergelists (uchan)
 	wg.Add(1)
-	go getseqX(flags, file1, seqXP, &err1, &wg, &symSync)
-	getseqX(flags, file2, seqXQ, &err2, nil, &symSync)
+	go getseqX(flags, file1, seqXP, &err1, &wg, uchan)
+	getseqX(flags, file2, seqXQ, &err2, nil, uchan)
 	wg.Wait()
 	if err1 != nil {
 		return err1
