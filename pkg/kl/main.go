@@ -138,9 +138,9 @@ func kl(kl_in *klIn, kl []float32) {
 
 	one_num_q := 1. / float64(kl_in.num_q+1)
 	seqLen := len(kl_in.counts_p[0])
-
+	nRow := len(kl_in.counts_p)
 	for icol := 0; icol < seqLen; icol++ { //            icol position in seq
-		for irow := 0; irow < kl_in.logbase; irow++ { // irow is symbol
+		for irow := 0; irow < nRow; irow++ { // irow is symbol
 			pcount := float64(kl_in.counts_p[irow][icol])
 			if pcount == 0 {
 				continue
@@ -187,8 +187,11 @@ func calcCosSim(counts_p [][]float32, counts_q [][]float32, cosSim []float32) {
 	}
 	pvec := make([]float32, len(counts_p))
 	qvec := make([]float32, len(counts_p))
-	for i := range counts_p { //                 i is position in sequence
-		for j := 0; j < len(counts_p); j++ { //  j is sequence number
+
+	nRow := len(counts_p)
+
+	for i := range counts_p[0] { //     i is position in sequence
+		for j := 0; j < nRow; j++ { //  j is sequence number
 			pvec[j] = counts_p[j][i]
 			qvec[j] = counts_q[j][i]
 		}
@@ -242,9 +245,11 @@ func entropyWrap(gapsAreChar bool, matrix [][]float32, entropy []float32,
 // into five pieces.
 func calcInner(seqXP, seqXQ SeqX) (klP, klQ, entropyP, entropyQ, cosSim []float32) {
 	var wg sync.WaitGroup
+
 	klP = make([]float32, seqXP.GetLen())
 	wg.Add(1)
 	go klFromSeqX(&seqXP, &seqXQ, klP, &wg)
+
 	klQ = make([]float32, seqXP.GetLen())
 	wg.Add(1)
 	go klFromSeqX(&seqXQ, &seqXP, klQ, &wg)
@@ -253,9 +258,11 @@ func calcInner(seqXP, seqXQ SeqX) (klP, klQ, entropyP, entropyQ, cosSim []float3
 	entropyP = make([]float32, seqXP.GetLen())
 	wg.Add(1) // race on next line
 	go entropyWrap(gapsAreChar, seqXP.counts.Mat, entropyP, seqXP.logbase, seqXP.gapMapping, &wg)
+
 	entropyQ = make([]float32, seqXP.GetLen())
 	wg.Add(1)
 	go entropyWrap(gapsAreChar, seqXQ.counts.Mat, entropyQ, seqXQ.logbase, seqXQ.gapMapping, &wg)
+
 	cosSim = make([]float32, seqXP.GetLen())
 	calcCosSim(seqXP.counts.Mat, seqXQ.counts.Mat, cosSim)
 
@@ -272,9 +279,9 @@ func writeKl(wrtr io.WriteCloser, numresults *numResults, offset int) {
 	heading := `"res num", "klP", "klQ", "S_p", "S_q", "cosine sim"`
 	fmt.Fprintln(wrtr, heading)
 	for i := range numresults.klP {
-		fmt.Fprintf(wrtr, "%d %g %g %g %g %g\n", i+1+offset,
-			numresults.klP, numresults.klQ,
-			numresults.entropyP, numresults.entropyQ, numresults.cosSim)
+		fmt.Fprintf(wrtr, "%d,%g,%g,%g,%g,%g\n", i+1+offset,
+			numresults.klP[i], numresults.klQ[i],
+			numresults.entropyP[i], numresults.entropyQ[i], numresults.cosSim[i])
 	}
 }
 
