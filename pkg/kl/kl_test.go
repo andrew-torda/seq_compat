@@ -5,13 +5,35 @@
 package kl_test
 
 import (
+	"io/ioutil"
 	"math"
 	"os"
 	"testing"
 
 	. "github.com/andrew-torda/seq_compat/pkg/kl"
+	"github.com/andrew-torda/seq_compat/pkg/randseq"
 	"github.com/andrew-torda/seq_compat/pkg/seq"
 )
+
+// TestTiny - just make sure we can open and read some files.
+func TestTiny(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "delete_me")
+	if err != nil {
+		t.Fatalf("Broke on tempfile %v", err)
+	}
+	cleanup := func() {
+		os.Remove(tmpfile.Name())
+	}
+	t.Cleanup(cleanup)
+	var args randseq.RandSeqArgs
+	args = randseq.RandSeqArgs{Wrtr: tmpfile, Iseed: 1, Len: 5, Nseq: 6}
+	randseq.RandSeqMain(&args)
+	tmpfile.Close()
+	var flags CmdFlag
+	if err = Mymain(&flags, tmpfile.Name(), tmpfile.Name(), "boo"); err != nil {
+		t.Fatalf("broke on tiny set: %v", err)
+	}
+}
 
 // TestError1 exercises code for broken files. It is not silly, since
 // there are gymnastics to handle errors from two threads.
@@ -23,10 +45,10 @@ func TestError1(t *testing.T) {
 		if err == nil { // first file is missing
 			t.Error(shouldProvoke)
 		}
-		err = Mymain(&flags, "testdata/a.fa", "notexist", os.DevNull)
+		err = Mymain(&flags, "testdata/a.fa", "/notexist", os.DevNull)
 		if err == nil { // second file is missing
 			t.Error(shouldProvoke)
-			err = Mymain(&flags, "/notexist", "/notexist", os.DevNull)
+			err = Mymain(&flags, "/notexist_1", "/notexist_2", os.DevNull)
 			if err == nil { // both files are missing
 				t.Error(shouldProvoke)
 			}
