@@ -66,7 +66,7 @@ func (l *lexer) next() {
 	l.itempool.New = newItem
 	backbuf1 := make([]byte, rdsize)
 	backbuf2 := make([]byte, rdsize)
-
+	var first bool = true
 	curbuf := &backbuf2
 	for {
 		item := l.itempool.Get().(*item)
@@ -94,6 +94,10 @@ func (l *lexer) next() {
 					}
 				}
 			}
+		}
+		if first { // skip over leading ">"
+			first = false
+			l.input = l.input[1:]
 		}
 
 		if ndx := bytes.IndexByte(l.input, l.term); ndx == -1 {
