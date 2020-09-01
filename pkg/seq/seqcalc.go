@@ -7,7 +7,6 @@ package seq
 
 import (
 	"math"
-	"sync"
 
 	"github.com/andrew-torda/matrix"
 	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
@@ -27,21 +26,22 @@ type SymSync struct {
 // two seqgrp's, then the symbols used in group A should also be
 // marked used in group B and vice versa. If we get a second varadic
 // argument, it is a channel to be used in combining.
-func (seqgrp *SeqGrp) SetSymUsed(wg *sync.WaitGroup, uchan ...chan [MaxSym]bool) {
-	if wg != nil {
-		defer wg.Done()
-	}
+func (seqgrp *SeqGrp) SetSymUsed() {
 	for _, ss := range seqgrp.seqs {
 		s := ss.GetSeq()
 		for _, c := range s {
 			seqgrp.symUsed[c] = true
 		}
 	}
-	if uchan != nil {
-		uchan[0] <- seqgrp.symUsed
-		seqgrp.symUsed = <-uchan[0]
-	}
 	seqgrp.usedKnwn = true
+}
+
+// func SetSymUsedWithChan calls set sym used, but with channels for synchronising
+// the symbols used by more than one seqgrp.
+func (seqgrp *SeqGrp) SetSymUsedWithChan(frmMrgChn, toMrgChn chan [MaxSym]bool) {
+	seqgrp.SetSymUsed()
+	toMrgChn <- seqgrp.symUsed
+	seqgrp.symUsed = <-frmMrgChn
 }
 
 // GetType looks at a set of sequences and returns its best guess
@@ -52,8 +52,7 @@ func (seqgrp *SeqGrp) GetType() SeqType {
 	}
 
 	if seqgrp.usedKnwn != true {
-		var wg *sync.WaitGroup
-		seqgrp.SetSymUsed(wg)
+		seqgrp.SetSymUsed()
 	}
 	protType := []byte{
 		'D', 'E', 'F', 'H', 'I', 'K', 'L', 'M',
@@ -89,7 +88,7 @@ func (seqgrp *SeqGrp) GetType() SeqType {
 // This writes into seqgrp.symUsed[i], but this is also used
 func (seqgrp *SeqGrp) mapsyms() error {
 	if seqgrp.usedKnwn != true {
-		seqgrp.SetSymUsed((*sync.WaitGroup)(nil))
+		seqgrp.SetSymUsed()
 	}
 	for i := range seqgrp.mapping { // Initialise with bad value, to
 		seqgrp.mapping[i] = badMap // trap errors later
