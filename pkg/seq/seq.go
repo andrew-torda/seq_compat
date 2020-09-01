@@ -79,8 +79,8 @@ type SeqGrp struct {
 // Function GetSeq returns the sequence as the original byte slice
 func (s seq) GetSeq() []byte { return s.seq }
 
-// Function GetCmmt returns the comment, including the leading ">"
-func (s seq) GetCmmt() string { return s.cmmt }
+// Function Cmmt returns the comment, including the leading ">"
+func (s seq) Cmmt() string { return s.cmmt }
 
 // Function Len
 func (s seq) Len() int { return len(s.seq) }
@@ -170,7 +170,7 @@ func (seq *seq) Upper() error {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if c >= MaxSym {
-			t := seq.GetCmmt()
+			t := seq.Cmmt()
 			t = trimStr(t, 40)
 			e := fmt.Errorf(symerr, c, i, t)
 			return e
@@ -193,7 +193,7 @@ func (s *seq) Copy() seq {
 // a single string
 func (s seq) String() (t string) {
 	if len(s.cmmt) > 0 {
-		t = fmt.Sprintf("%c%s\n", cmmt_char, s.GetCmmt())
+		t = fmt.Sprintf("%c%s\n", cmmt_char, s.Cmmt())
 	} else {
 		t = ">\n"
 	}
@@ -263,7 +263,7 @@ func (seqgrp *SeqGrp) GetNSym() int {
 }
 
 // GetSeqSlc return the slice of sequences
-func (seqgrp *SeqGrp) GetSeqSlc() []seq { return seqgrp.seqs }
+func (seqgrp *SeqGrp) SeqSlc() []seq { return seqgrp.seqs }
 
 // GetMap tells us where we are storing info about a symbol in our
 // tallies. So, seq[i].GetMap() tells us where to put info about this
@@ -292,7 +292,7 @@ sequence %i length: %i. Sequence starts %s"`
 	for i := 1; i < len(seq_set); i++ {
 		ilen := len(seq_set[i].GetSeq())
 		if ilen != iwant {
-			return (fmt.Errorf(msg, iwant, ilen, trimStr(seq_set[i].GetCmmt(), 40)))
+			return (fmt.Errorf(msg, iwant, ilen, trimStr(seq_set[i].Cmmt(), 40)))
 		}
 	}
 	return nil
@@ -357,7 +357,7 @@ func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 		if seq.Empty() {
 			continue
 		}
-		fmt.Fprintf(outfile_fp, "%c%s\n", cmmt_char, seq.GetCmmt())
+		fmt.Fprintf(outfile_fp, "%c%s\n", cmmt_char, seq.Cmmt())
 
 		s := seq.GetSeq()
 		if s_opts.Rmv_gaps_wrt { // we have to remove gap characters on output
@@ -394,7 +394,7 @@ func (seqgrp *SeqGrp) FindNdx(s string) int {
 	s = strings.TrimLeft(s, " >	")
 
 	for i, seq := range seqgrp.seqs {
-		if strings.Contains(seq.GetCmmt(), s) {
+		if strings.Contains(seq.Cmmt(), s) {
 			return i
 		}
 	}

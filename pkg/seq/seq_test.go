@@ -21,7 +21,31 @@ const (
 
 var seq_lengths = []int{10, 30, bigminus1, big, bigplus1}
 
-// This is to track down a specific bug I had
+func cmmtHelp (got, want string, t *testing.T) {
+	if got != want {
+		t.Fatalf("checking comments wanted \"%s\" got \"%s\"", want, got)
+	}
+}
+// TestComment is to check that comments are read exactly, correctly
+func TestComment(t *testing.T) {
+	c0 := "testcomment no space"
+	c1 := " testcomment with space at start"
+	s := "aaa\n"
+	seqs := ">" + c0 + "\n" + s + ">" + c1 + "\n" + s
+	sr := strings.NewReader(seqs)
+	var seqgrp SeqGrp
+	var s_opts Options
+
+	if err := ReadFasta(sr, &seqgrp, &s_opts); err != nil {
+		t.Fatal("bust reading simple seqs in TestComment", err)
+	}
+	slc := seqgrp.SeqSlc()
+
+	cmmtHelp (slc[1].Cmmt(), c1, t)
+	cmmtHelp (slc[0].Cmmt(), c0, t)
+}
+
+// TestFastaBug is to track down a specific bug I had
 func TestFastaBug(t *testing.T) {
 	const nseq = 5
 	const sLen = 16
@@ -167,7 +191,7 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 			len(seq_lengths), seqgrp.GetNSeq(),
 			"Spaces was set to ", spaces)
 	}
-	for i, s := range seqgrp.GetSeqSlc() {
+	for i, s := range seqgrp.SeqSlc() {
 		if !spaces {
 			if s.Len() != seq_lengths[i] {
 				t.Fatalf("Seq length expected %d, got %d", seq_lengths[i], s.Len())
@@ -459,7 +483,7 @@ func TestCompat(t *testing.T) {
 			t.Fatalf("substring fail looking for %s, expected 1, got %d", "reference", n)
 		}
 
-		slc := seqgrp.GetSeqSlc()
+		slc := seqgrp.SeqSlc()
 		sq := slc[n].GetSeq()
 		compat := seqgrp.Compat(sq, false)
 		if !sliceEql(compat, exp.v) {
@@ -482,7 +506,7 @@ func TestStr2SeqGrp(t *testing.T) {
 	if i := seqgrp.GetNSeq(); i != 3 {
 		t.Fatalf("Wrong num seqs, want 3, got %d", i)
 	}
-	if i := len(seqgrp.GetSeqSlc()[0].GetSeq()); i != 2 {
+	if i := len(seqgrp.SeqSlc()[0].GetSeq()); i != 2 {
 		t.Fatalf("Wrong seq len, want 2, got %d", i)
 	}
 }
@@ -553,25 +577,25 @@ func TestGetNSeq(t *testing.T) {
 			t.Fatalf("Wrong nsym. Wanted %d, got %d", a.nsym, nsym)
 		}
 	} /*
-	for _, a := range testdat {
-		var wg sync.WaitGroup
-		var wgNil *sync.WaitGroup
-		seqgrp1 := Str2SeqGrp(a.ss)
-		seqgrp2 := Str2SeqGrp(a.tt)
-		
-		uchan := make(chan [MaxSym]bool)
-		wg.Add(1)
-		go seqgrp1.SetSymUsed(&wg, uchan)
+		for _, a := range testdat {
+			var wg sync.WaitGroup
+			var wgNil *sync.WaitGroup
+			seqgrp1 := Str2SeqGrp(a.ss)
+			seqgrp2 := Str2SeqGrp(a.tt)
 
-		seqgrp2.SetSymUsed(wgNil, uchan)
-		wg.Wait()
-		if seqgrp1.GetNSym() != seqgrp2.GetNSym() {
-			t.Fatalf("nsym mismatch %d vs %d", seqgrp1.GetNSym(), seqgrp2.GetNSym())
-		}
-		if n := seqgrp1.GetNSym(); n != a.ncmb {
-			t.Fatalf("combined nsyms, wanted %d got %d", a.ncmb, n)
-		}
-	} */
+			uchan := make(chan [MaxSym]bool)
+			wg.Add(1)
+			go seqgrp1.SetSymUsed(&wg, uchan)
+
+			seqgrp2.SetSymUsed(wgNil, uchan)
+			wg.Wait()
+			if seqgrp1.GetNSym() != seqgrp2.GetNSym() {
+				t.Fatalf("nsym mismatch %d vs %d", seqgrp1.GetNSym(), seqgrp2.GetNSym())
+			}
+			if n := seqgrp1.GetNSym(); n != a.ncmb {
+				t.Fatalf("combined nsyms, wanted %d got %d", a.ncmb, n)
+			}
+		} */
 }
 
 // TestSeqInfo tests some seq manipulation functions
@@ -580,10 +604,10 @@ func TestSeqInfo(t *testing.T) {
 	const sometext = "sometext is here"
 	seqgrp := Str2SeqGrp(ss, sometext)
 
-	a0 := &(seqgrp.GetSeqSlc()[0])
-	a1 := &(seqgrp.GetSeqSlc()[1])
+	a0 := &(seqgrp.SeqSlc()[0])
+	a1 := &(seqgrp.SeqSlc()[1])
 
-	c := a0.GetCmmt()
+	c := a0.Cmmt()
 	if strings.Contains(c, sometext) == false {
 		t.Fatal("did not find: " + sometext + " got " + c)
 	}
@@ -610,10 +634,10 @@ func TestSeqInfo(t *testing.T) {
 	a0.SetSeq([]byte(aaaaaaaa))
 	a1.SetSeq([]byte(bbbbbbbb))
 	// Now go back to the slice and check if the values are there
-	if bytes.Contains(seqgrp.GetSeqSlc()[0].GetSeq(), []byte(aaaaaaaa)) == false {
+	if bytes.Contains(seqgrp.SeqSlc()[0].GetSeq(), []byte(aaaaaaaa)) == false {
 		t.Fatal("Did not change sequence aaaa properly")
 	}
-	if bytes.Contains(seqgrp.GetSeqSlc()[1].GetSeq(), []byte(bbbbbbbb)) == false {
+	if bytes.Contains(seqgrp.SeqSlc()[1].GetSeq(), []byte(bbbbbbbb)) == false {
 		t.Fatal("Did not change sequence bbbbb properly")
 	}
 }
