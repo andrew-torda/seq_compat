@@ -6,7 +6,6 @@
 //   Write out a long list
 //     kl_pq, kl_qp, entropy p, entropy q, cosine similarity
 
-
 package main
 
 import (
@@ -14,9 +13,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime/pprof"
 
-	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 	"github.com/andrew-torda/seq_compat/pkg/kl"
+	. "github.com/andrew-torda/seq_compat/pkg/seq/common"
 )
 
 // usage
@@ -30,17 +30,31 @@ func usage() int {
 func main() {
 	var flags kl.CmdFlag
 	outfile := "-"
+	var cpuprof, memprof string
 	flag.IntVar(&flags.Offset, "f", 0, "offset for numbering output")
 	flag.BoolVar(&flags.GapsAreChar, "g", false, "gap is a valid symbol")
 	flag.IntVar(&flags.NSym, "n", -1, "num symbols, guessed by default, 4 for DNA")
 	flag.StringVar(&outfile, "o", "", "output file name, default stdout")
-
+	flag.StringVar(&cpuprof, "c", "", "write cpu usage to file")
+	flag.StringVar(&memprof, "m", "", "write mem usage to file")
 	flag.Parse()
 
 	seqf1 := flag.Arg(0)
 	seqf2 := flag.Arg(1)
 	if seqf1 == "" || seqf2 == "" {
 		os.Exit(usage())
+	}
+
+	if cpuprof != "" {
+		f, err := os.Create(cpuprof)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			fmt.Fprintln(os.Stderr, "could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
 	}
 	if err := kl.Mymain(&flags, seqf1, seqf2, outfile); err != nil {
 		fmt.Fprintln(os.Stderr, err)

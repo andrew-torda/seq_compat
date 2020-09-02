@@ -5,13 +5,35 @@
 package kl_test
 
 import (
+	"io/ioutil"
 	"math"
 	"os"
 	"testing"
 
-	"github.com/andrew-torda/seq_compat/pkg/seq"
 	. "github.com/andrew-torda/seq_compat/pkg/kl"
+	"github.com/andrew-torda/seq_compat/pkg/randseq"
+	"github.com/andrew-torda/seq_compat/pkg/seq"
 )
+
+// TestTiny - just make sure we can open and read some files.
+func TestTiny(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "delete_me")
+	if err != nil {
+		t.Fatalf("Broke on tempfile %v", err)
+	}
+	cleanup := func() {
+		os.Remove(tmpfile.Name())
+	}
+	t.Cleanup(cleanup)
+	var args randseq.RandSeqArgs
+	args = randseq.RandSeqArgs{Wrtr: tmpfile, Iseed: 1, Len: 5, Nseq: 6}
+	randseq.RandSeqMain(&args)
+	tmpfile.Close()
+	var flags CmdFlag
+	if err = Mymain(&flags, tmpfile.Name(), tmpfile.Name(), "boo"); err != nil {
+		t.Fatalf("broke on tiny set: %v", err)
+	}
+}
 
 // TestError1 exercises code for broken files. It is not silly, since
 // there are gymnastics to handle errors from two threads.
@@ -20,12 +42,16 @@ func TestError1(t *testing.T) {
 	shouldProvoke := "should have provoked an error message"
 	for i := 0; i < 30; i++ { // there are some channels involved, so repeat
 		err := Mymain(&flags, "notexist", "testdata/a.fa", os.DevNull)
-		if err == nil {
+		if err == nil { // first file is missing
 			t.Error(shouldProvoke)
 		}
-		err = Mymain(&flags, "testdata/a.fa", "notexist", os.DevNull)
-		if err == nil {
+		err = Mymain(&flags, "testdata/a.fa", "/notexist", os.DevNull)
+		if err == nil { // second file is missing
 			t.Error(shouldProvoke)
+			err = Mymain(&flags, "/notexist_1", "/notexist_2", os.DevNull)
+			if err == nil { // both files are missing
+				t.Error(shouldProvoke)
+			}
 		}
 	}
 }
@@ -38,10 +64,10 @@ func TestSimple1(t *testing.T) {
 	seqgrp2 := seq.Str2SeqGrp(s2, "t")
 	var seqX1, seqX2 SeqX
 
-	if err := GetSeqX(seqgrp1, &seqX1, &flags); err != nil {
+	if err := ExtractSeqX(seqgrp1, &seqX1, &flags); err != nil {
 		t.Fatal(err)
 	}
-	if err := GetSeqX(seqgrp2, &seqX2, &flags); err != nil {
+	if err := ExtractSeqX(seqgrp2, &seqX2, &flags); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -63,6 +89,7 @@ func f(want, got float32, i int, name string, t *testing.T) {
 	}
 }
 func breaker() {}
+
 // TestKL is for the Kullbach-Leibler distance. It is a bit difficult since
 // the test columns run across the page.
 func TestKL(t *testing.T) {
@@ -82,7 +109,7 @@ func TestKL(t *testing.T) {
 		b = p2b * (math.Log(p2b/p1b) / log4)
 		messyB = float32(a + b)
 
-		messyC = float32(math.Log (5.) / log4)
+		messyC = float32(math.Log(5.) / log4)
 	}
 	ss := [][]string{
 		{"aaaaa", "bbaaa", "ccaaa", "dcaaa"},
@@ -99,10 +126,10 @@ func TestKL(t *testing.T) {
 	seqgrp2 := seq.Str2SeqGrp(ss[1], "tt1")
 
 	var seqX1, seqX2 SeqX
-	if err := GetSeqX(seqgrp1, &seqX1, &flags); err != nil {
+	if err := ExtractSeqX(seqgrp1, &seqX1, &flags); err != nil {
 		t.Fatal(err)
 	}
-	if err := GetSeqX(seqgrp2, &seqX2, &flags); err != nil {
+	if err := ExtractSeqX(seqgrp2, &seqX2, &flags); err != nil {
 		t.Fatal(err)
 	}
 

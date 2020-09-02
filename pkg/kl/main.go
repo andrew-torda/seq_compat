@@ -40,7 +40,7 @@ func (seqx *SeqX) GetLen() int { return seqx.len }
 // seqX gets the relevant information for KL calculation from a sequence
 // group. It only goes into its own function so it can be called
 // during testing.
-func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
+func extractSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	var err error
 	var gapsAreChars = false
 
@@ -63,22 +63,18 @@ func getSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 // in parallel. The first call is running in the background, so if he gets a
 // non-zero waitgroup, he knows to call wg.Done().
 // The foreground process gets a nil pointer.
-func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
-	wg *sync.WaitGroup, symSync *seq.SymSync) {
+func getseqX(flags *CmdFlag, infile string, seqX *SeqX,
+	err *error, frmMrgChn chan [seq.MaxSym]bool, toMrgChn chan [seq.MaxSym]bool) {
 	bailout := func() {
 		var junk [seq.MaxSym]bool
-		symSync.UChan <- junk
-	}
-	if wg != nil { // Only use the wait group for the
-		defer wg.Done() // background goroutine.
+		toMrgChn <- junk
+		<- frmMrgChn
 	}
 
 	s_opts := &seq.Options{
-		Vbsty: 0, Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		Keep_gaps_rd: true,
 	}
-
+	
 	seqgrp, e := seq.Readfile(infile, s_opts)
 	if e != nil {
 		*err = fmt.Errorf("Fail reading sequences: %w", e)
@@ -91,23 +87,41 @@ func getseqX(flags *CmdFlag, infile string, seqX *SeqX, err *error,
 		return
 	}
 	seqgrp.Upper()
+	seqgrp.SetSymUsedWithChan(frmMrgChn, toMrgChn)
+	*err = extractSeqX(seqgrp, seqX, flags)
+}
 
-	seqgrp.SetSymUsed(nil, symSync)
-	*err = getSeqX(seqgrp, seqX, flags)
+// mergelists merges two lists of symbols that have been
+// used. It reads each list from a channel, merges them
+// and returns the merged list, which will have overwritten
+// the first list it received.
+func mergelists(wg *sync.WaitGroup, frmMrgChn chan [seq.MaxSym]bool, toMrgChn chan [seq.MaxSym]bool) {
+	a1, a2 := <-toMrgChn, <-toMrgChn
+	for i := range a1 {
+		a1[i] = a1[i] || a2[i]
+	}
+
+	frmMrgChn <- a1
+	frmMrgChn <- a1
+	close(frmMrgChn)
+	wg.Done()
 }
 
 // readtwofiles reads the two input sequence files. One of them will
 // be read in the background. We use a waitgroup for synchronising.
-func readtwofiles(flags *CmdFlag, file1, file2 string,
-	seqXP, seqXQ *SeqX) error {
+func readtwofiles(flags *CmdFlag, file1, file2 string, seqXP, seqXQ *SeqX) error {
 	var err1, err2 error
 	var wg sync.WaitGroup
-	var once sync.Once
-	symSync := seq.SymSync{Once: once, UChan: make(chan [seq.MaxSym]bool)}
+
+	frmMrgChn := make(chan [seq.MaxSym]bool)
+	toMrgChn := make(chan [seq.MaxSym]bool)
 	wg.Add(1)
-	go getseqX(flags, file1, seqXP, &err1, &wg, &symSync)
-	getseqX(flags, file2, seqXQ, &err2, nil, &symSync)
+	go mergelists(&wg, frmMrgChn, toMrgChn)
+
+	go getseqX(flags, file1, seqXP, &err1, frmMrgChn, toMrgChn)
+	getseqX(flags, file2, seqXQ, &err2, frmMrgChn, toMrgChn)
 	wg.Wait()
+	close (toMrgChn)
 	if err1 != nil {
 		return err1
 	}
@@ -300,7 +314,7 @@ func Mymain(flags *CmdFlag, fileP, fileQ, outfile string) (err error) {
 	if outfile == "" || outfile == "-" {
 		wrtr = os.Stdout
 	} else {
-		fp, err := os.Create("outfile")
+		fp, err := os.Create(outfile)
 		if err != nil {
 			return err
 		}
