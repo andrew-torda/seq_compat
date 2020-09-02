@@ -63,18 +63,21 @@ func extractSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 // in parallel. The first call is running in the background, so if he gets a
 // non-zero waitgroup, he knows to call wg.Done().
 // The foreground process gets a nil pointer.
-func getseqX(flags *CmdFlag, infile string, seqX *SeqX,
+func getseqX(wg *sync.WaitGroup, flags *CmdFlag, infile string, seqX *SeqX,
 	err *error, frmMrgChn chan [seq.MaxSym]bool, toMrgChn chan [seq.MaxSym]bool) {
+	if wg != nil {
+		defer wg.Done()
+	}
 	bailout := func() {
 		var junk [seq.MaxSym]bool
 		toMrgChn <- junk
-		<- frmMrgChn
+		<-frmMrgChn
 	}
 
 	s_opts := &seq.Options{
 		Keep_gaps_rd: true,
 	}
-	
+
 	seqgrp, e := seq.Readfile(infile, s_opts)
 	if e != nil {
 		*err = fmt.Errorf("Fail reading sequences: %w", e)
@@ -117,11 +120,11 @@ func readtwofiles(flags *CmdFlag, file1, file2 string, seqXP, seqXQ *SeqX) error
 	toMrgChn := make(chan [seq.MaxSym]bool)
 	wg.Add(1)
 	go mergelists(&wg, frmMrgChn, toMrgChn)
-
-	go getseqX(flags, file1, seqXP, &err1, frmMrgChn, toMrgChn)
-	getseqX(flags, file2, seqXQ, &err2, frmMrgChn, toMrgChn)
+	wg.Add(1)
+	go getseqX(&wg, flags, file1, seqXP, &err1, frmMrgChn, toMrgChn)
+	getseqX(nil, flags, file2, seqXQ, &err2, frmMrgChn, toMrgChn)
 	wg.Wait()
-	close (toMrgChn)
+	close(toMrgChn)
 	if err1 != nil {
 		return err1
 	}

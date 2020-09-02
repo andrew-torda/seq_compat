@@ -26,7 +26,7 @@ func MyMain(seqstring, infile, outfile string) int {
 		fmt.Fprintf(os.Stderr, `Could not find "%s" amongst sequences\n`, seqstring)
 		return ExitFailure
 	}
-	seqslc := seqgrp.GetSeqSlc()       // Slice of sequences
+	seqslc := seqgrp.SeqSlc()       // Slice of sequences
 	maskseq := seqslc[ndxref].GetSeq() // The reference sequence
 	nfullseq := len(maskseq)
 	mask := make([]bool, nfullseq)
@@ -39,7 +39,7 @@ func MyMain(seqstring, infile, outfile string) int {
 		}
 	}
 	const emsg = "Length mismatch ref: %d seq %d len %d\n"
-	for i, ss := range seqgrp.GetSeqSlc() {
+	for i, ss := range seqgrp.SeqSlc() {
 		if len(ss.GetSeq()) != nfullseq {
 			fmt.Fprintf(os.Stderr, emsg, nfullseq, i, len(ss.GetSeq()))
 			return ExitFailure
@@ -50,10 +50,10 @@ func MyMain(seqstring, infile, outfile string) int {
 				b = append(b, c)
 			}
 		}
-		seqgrp.GetSeqSlc()[i].SetSeq(b) // do not use "ss" here
+		seqgrp.SeqSlc()[i].SetSeq(b) // do not use "ss" here
 	}
 
-	if err := seq.WriteToF(outfile, seqgrp.GetSeqSlc(), s_opts); err != nil {
+	if err := seq.WriteToF(outfile, seqgrp.SeqSlc(), s_opts); err != nil {
 		if outfile == "" {
 			outfile = "os.Stdout"
 		}
