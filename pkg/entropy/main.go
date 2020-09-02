@@ -84,7 +84,7 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 		if ndxSeq := seqgrp.FindNdx(flags.RefSeq); ndxSeq == -1 {
 			return (fmt.Errorf(`Cannot find ref sequence "%s"\n`, flags.RefSeq))
 		} else {
-			ntrpyargs.refseq = seqgrp.GetSeqSlc()[ndxSeq].GetSeq()
+			ntrpyargs.refseq = seqgrp.SeqSlc()[ndxSeq].GetSeq()
 			ntrpyargs.compat = seqgrp.Compat(ntrpyargs.refseq, flags.GapsAreChar)
 		}
 	}
