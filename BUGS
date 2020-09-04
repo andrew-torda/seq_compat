@@ -1,0 +1,2 @@
+If we read from standard input, the code chugs along until the seek fails.
+Either stop this happening or revert to the behaviour of not pre-allocating sequence space.
