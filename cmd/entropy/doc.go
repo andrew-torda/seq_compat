@@ -6,7 +6,6 @@ Entropy calculates sequence entropy from a multiple sequence alignment.
 If given a reference sequence, it will also calculate the probability of finding
 that sequence's residue at a particular position.
 
-Given no explicit input path, it reads from standard input.
 Given no output filename, it write to standard output.
 Gaps are normally ignored. Calculations are done using only the
 residues/bases in each column, but there is an option to treat gaps as a valid character.
@@ -32,5 +31,13 @@ The flags are:
 		for in the comment lines of the sequences
 
 If you have a reference sequence, the compatibility of each base/residue will be calculated and printed out.
+
+OUTPUT
+Output is written to the standard output, which you probably do not want. Catch the output on the command line or use the -o option to send it to a file.
+
+The format is .csv with quoted heading for the columns. It can be eaten with read.csv in R or imported straight into excel. Gnuplot also knows what to do with it.
+
+TODO
+One could add a mapping of input residues to output, so, for example, selenomethionine becomes methionine.
 */
 package main
