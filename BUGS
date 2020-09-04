@@ -1,0 +1,3 @@
+* If we have an input like stdin where seek does not work, the program chugs along until it catches the seek error. We should either
+  - revert to the non-seeking output or
+  - declare this illegal
