@@ -1,3 +1,2 @@
-* If we have an input like stdin where seek does not work, the program chugs along until it catches the seek error. We should either
-  - revert to the non-seeking output or
-  - declare this illegal
+If we read from standard input, the code chugs along until the seek fails.
+Either stop this happening or revert to the behaviour of not pre-allocating sequence space.
