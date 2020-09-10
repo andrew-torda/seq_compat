@@ -67,9 +67,8 @@ aaa`
 		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
 	}
 	for i := 0; i< 3; i++ {
-		ss := seqgrp.SeqSlc()
-		sss := ss[i]
-		l := sss.Len()
+		ss := seqgrp.SeqSlc()[i]
+		l := ss.Len()
 		if l != i + 1 {
 			t.Fatalf ("seqs diff length got %d wanted %d", l, i+1)
 		}
