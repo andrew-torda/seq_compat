@@ -29,7 +29,6 @@ func usage() int {
 func main() {
 	var flags kl.CmdFlag
 	outfile := "-"
-	var cpuprof, memprof string
 	flag.IntVar(&flags.Offset, "f", 0, "offset for numbering output")
 	flag.BoolVar(&flags.GapsAreChar, "g", false, "gap is a valid symbol")
 	flag.IntVar(&flags.NSym, "n", -1, "num symbols, guessed by default, 4 for DNA")

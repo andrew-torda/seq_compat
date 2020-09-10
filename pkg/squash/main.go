@@ -12,7 +12,7 @@ import (
 // MyMain is the top level main, after parsing the command line.
 func MyMain(seqstring, infile, outfile string) int {
 	s_opts := &seq.Options{
-		Vbsty: 0, Keep_gaps_rd: true,
+		Keep_gaps_rd: true,
 		Dry_run:      false,
 		Rmv_gaps_wrt: false}
 

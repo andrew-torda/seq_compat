@@ -50,8 +50,6 @@ const (
 
 // Options contains all the choices passed in from the caller.
 type Options struct {
-	Vbsty        int
-	ExpecttSeq   int  // Expected number of sequences
 	DiffLenSeq   bool // false, unless we expect sequences to be different lengths
 	Dry_run      bool // Do not write any files
 	Keep_gaps_rd bool // Keep gaps upon reading
