@@ -246,8 +246,8 @@ func (seqgrp *SeqGrp) clear() {
 	seqgrp.freqKnwn = false
 }
 
-// GetNSeq returns the number of sequences
-func (seqgrp *SeqGrp) GetNSeq() int { return len(seqgrp.seqs) }
+// NSeq returns the number of sequences
+func (seqgrp *SeqGrp) NSeq() int { return len(seqgrp.seqs) }
 
 // GetNSym returns the number of symbols used in a seqgrp.
 // Used in testing.

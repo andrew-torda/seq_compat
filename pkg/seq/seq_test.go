@@ -21,11 +21,12 @@ const (
 
 var seq_lengths = []int{10, 30, bigminus1, big, bigplus1}
 
-func cmmtHelp (got, want string, t *testing.T) {
+func cmmtHelp(got, want string, t *testing.T) {
 	if got != want {
 		t.Fatalf("checking comments wanted \"%s\" got \"%s\"", want, got)
 	}
 }
+
 // TestComment is to check that comments are read exactly, correctly
 func TestComment(t *testing.T) {
 	c0 := "testcomment no space"
@@ -41,8 +42,31 @@ func TestComment(t *testing.T) {
 	}
 	slc := seqgrp.SeqSlc()
 
-	cmmtHelp (slc[1].Cmmt(), c1, t)
-	cmmtHelp (slc[0].Cmmt(), c0, t)
+	cmmtHelp(slc[1].Cmmt(), c1, t)
+	cmmtHelp(slc[0].Cmmt(), c0, t)
+}
+
+// TestDiffLen checks if we can read sequences of different lengths
+func TestDiffLen(t *testing.T) {
+	s := `>s1
+a
+> s2
+aa
+> s3
+aaa`
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: true,
+		KeepGapsRd: false,
+	}
+
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
+		t.Fatal("Reading seqs failed", err)
+	}
+	if ngot := seqgrp.GetNSeq(); ngot != 3 {
+		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
+	}
+
 }
 
 // TestFastaBug is to track down a specific bug I had
@@ -62,7 +86,7 @@ func TestFastaBug(t *testing.T) {
 
 	s_opts := &Options{
 		KeepGapsRd: false,
-		DryRun:      true,
+		DryRun:     true,
 		RmvGapsWrt: true,
 	}
 
@@ -176,9 +200,9 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 
 	s_opts := &Options{
 		KeepGapsRd: false,
-		DryRun:      true,
+		DryRun:     true,
 		RmvGapsWrt: true,
-		DiffLenSeq:   true,
+		DiffLenSeq: true,
 	}
 
 	var seqgrp SeqGrp
@@ -279,9 +303,9 @@ var stypedata = []struct {
 func TestTypes(t *testing.T) {
 	var s_opts = &Options{
 		KeepGapsRd: false,
-		DryRun:      true,
+		DryRun:     true,
 		RmvGapsWrt: true,
-		DiffLenSeq:   true,
+		DiffLenSeq: true,
 	}
 
 	for tnum, x := range stypedata {
@@ -377,7 +401,7 @@ func wrtTmp(s string) (string, error) {
 func TestEntropy(t *testing.T) {
 	s_opts := &Options{
 		KeepGapsRd: true,
-		DryRun:      true,
+		DryRun:     true,
 		RmvGapsWrt: false}
 
 	for tnum, x := range entdata {
@@ -413,7 +437,7 @@ DEF
 DEF`
 	s_opts := &Options{
 		KeepGapsRd: true,
-		DryRun:      true,
+		DryRun:     true,
 		RmvGapsWrt: false}
 
 	var seqgrp SeqGrp
@@ -464,7 +488,7 @@ func TestCompat(t *testing.T) {
 	}
 	s_opts := &Options{
 		KeepGapsRd: true,
-		DryRun:      true,
+		DryRun:     true,
 		RmvGapsWrt: false}
 
 	for i, exp := range expected {
@@ -576,26 +600,7 @@ func TestGetNSeq(t *testing.T) {
 		if nsym != a.nsym {
 			t.Fatalf("Wrong nsym. Wanted %d, got %d", a.nsym, nsym)
 		}
-	} /*
-		for _, a := range testdat {
-			var wg sync.WaitGroup
-			var wgNil *sync.WaitGroup
-			seqgrp1 := Str2SeqGrp(a.ss)
-			seqgrp2 := Str2SeqGrp(a.tt)
-
-			uchan := make(chan [MaxSym]bool)
-			wg.Add(1)
-			go seqgrp1.SetSymUsed(&wg, uchan)
-
-			seqgrp2.SetSymUsed(wgNil, uchan)
-			wg.Wait()
-			if seqgrp1.GetNSym() != seqgrp2.GetNSym() {
-				t.Fatalf("nsym mismatch %d vs %d", seqgrp1.GetNSym(), seqgrp2.GetNSym())
-			}
-			if n := seqgrp1.GetNSym(); n != a.ncmb {
-				t.Fatalf("combined nsyms, wanted %d got %d", a.ncmb, n)
-			}
-		} */
+	}
 }
 
 // TestSeqInfo tests some seq manipulation functions

@@ -36,6 +36,8 @@ type lexer struct {
 	seqblock   []byte // Big block where all the sequences are placed
 	err        error  // error passed back to caller at end
 	expLen     int    // Expected length of sequences. If zero, not used.
+	rangeStart int    // Start and end of sequence range to be kept. Copied
+	rangeEnd   int    // from seq options. Zero means keep everything.
 	term       byte   // terminator of comments or sequences
 	diffLenSeq bool   // are all sequences the same length ?
 	notfirst   bool   // Not the first call
@@ -130,7 +132,11 @@ func firstCall(l *lexer) {
 		l.err = errors.New("no sequences found")
 		return
 	}
-	l.expLen = len(l.seq)
+	if l.rangeStart != 0 || l.rangeEnd != 0 {
+		l.expLen = l.rangeEnd - l.rangeStart + 1
+	} else {
+		l.expLen = len(l.seq)
+	}
 	l.seqblock = make([]byte, 0, l.expLen*nseq)
 }
 
@@ -201,6 +207,7 @@ func cmmtFn(l *lexer) stateFn {
 func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	l := lexer{
 		rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL,
+		rangeStart: s_opts.RangeStart, rangeEnd: s_opts.RangeEnd,
 		diffLenSeq: s_opts.DiffLenSeq,
 	}
 
@@ -208,7 +215,7 @@ func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	for state := cmmtFn; state != nil; {
 		state = state(&l)
 	}
-	if seqgrp.GetNSeq() == 0 {
+	if seqgrp.NSeq() == 0 {
 		l.err = errors.New("No sequences found")
 	}
 	return l.err

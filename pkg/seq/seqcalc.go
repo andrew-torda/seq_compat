@@ -304,7 +304,7 @@ func (seqgrp *SeqGrp) Compat(refseq []byte, gapsAreChar bool) []float32 {
 		seqgrp.UsageFrac(gapsAreChar)
 	}
 	compat := make([]float32, len(seqgrp.seqs[0].GetSeq()))
-	ntotal := seqgrp.GetNSeq()
+	ntotal := seqgrp.NSeq()
 	gapfrac := seqgrp.GapFrac()
 	if gapfrac == nil {
 		gapfrac = make([]float32, len(seqgrp.seqs[0].GetSeq()))
