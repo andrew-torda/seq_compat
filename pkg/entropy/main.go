@@ -66,9 +66,9 @@ type CmdFlag struct {
 func Mymain(flags *CmdFlag, infile, outfile string) error {
 	var err error
 	s_opts := &seq.Options{
-		Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		KeepGapsRd: true,
+		DryRun:      true,
+		RmvGapsWrt: true,
 	}
 
 	var ntrpyargs = &ntrpyargs{ // start setting up things to go

@@ -29,15 +29,13 @@ func benchmarkReadFasta(i int, b *testing.B) {
 
 	reader := strings.NewReader(sb.String())
 	s_opts := &seq.Options{
-		Keep_gaps_rd: false,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		KeepGapsRd: false,
+		DryRun:     true,
+		RmvGapsWrt: true,
 	}
 
 	var seqgrp, junk seq.SeqGrp
 	_ = seq.ReadFasta(strings.NewReader(sb.String()), &junk, s_opts)
-
-	
 
 	b.StartTimer()
 	if err := seq.ReadFasta(reader, &seqgrp, s_opts); err != nil {

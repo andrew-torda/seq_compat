@@ -61,9 +61,9 @@ func TestFastaBug(t *testing.T) {
 	SetFastaRdSize(200)
 
 	s_opts := &Options{
-		Keep_gaps_rd: false,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		KeepGapsRd: false,
+		DryRun:      true,
+		RmvGapsWrt: true,
 	}
 
 	var seqgrp SeqGrp
@@ -175,9 +175,9 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 	reader := strings.NewReader(b.String())
 
 	s_opts := &Options{
-		Keep_gaps_rd: false,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		KeepGapsRd: false,
+		DryRun:      true,
+		RmvGapsWrt: true,
 		DiffLenSeq:   true,
 	}
 
@@ -218,7 +218,7 @@ func TestEmpty(t *testing.T) {
 		}
 
 		f_tmp.Close()
-		s_opts := &Options{Keep_gaps_rd: true, Dry_run: true}
+		s_opts := &Options{KeepGapsRd: true, DryRun: true}
 		if _, err := Readfile(f_tmp.Name(), s_opts); err == nil {
 			t.Fatal("should generate error on zero-length file")
 		}
@@ -278,9 +278,9 @@ var stypedata = []struct {
 // TestTypes checks the code for recognising RNA/DNA/Protein/whatever types.
 func TestTypes(t *testing.T) {
 	var s_opts = &Options{
-		Keep_gaps_rd: false,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		KeepGapsRd: false,
+		DryRun:      true,
+		RmvGapsWrt: true,
 		DiffLenSeq:   true,
 	}
 
@@ -376,9 +376,9 @@ func wrtTmp(s string) (string, error) {
 // TestEntropy checks the entropy calculation.
 func TestEntropy(t *testing.T) {
 	s_opts := &Options{
-		Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: false}
+		KeepGapsRd: true,
+		DryRun:      true,
+		RmvGapsWrt: false}
 
 	for tnum, x := range entdata {
 		var seqgrp SeqGrp
@@ -412,9 +412,9 @@ DEF
 > more here in seq2
 DEF`
 	s_opts := &Options{
-		Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: false}
+		KeepGapsRd: true,
+		DryRun:      true,
+		RmvGapsWrt: false}
 
 	var seqgrp SeqGrp
 
@@ -463,9 +463,9 @@ func TestCompat(t *testing.T) {
 		{ufset1, []float32{1, 0.5, 0}},
 	}
 	s_opts := &Options{
-		Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: false}
+		KeepGapsRd: true,
+		DryRun:      true,
+		RmvGapsWrt: false}
 
 	for i, exp := range expected {
 		var err error

@@ -50,10 +50,12 @@ const (
 
 // Options contains all the choices passed in from the caller.
 type Options struct {
-	DiffLenSeq   bool // false, unless we expect sequences to be different lengths
-	Dry_run      bool // Do not write any files
-	Keep_gaps_rd bool // Keep gaps upon reading
-	Rmv_gaps_wrt bool // Remove gaps on output
+	RangeStart int  // When reading, keep only range from Start to End.
+	RangeEnd   int  // If Start and End are zero, keep everything.
+	DiffLenSeq bool // false, unless we expect sequences to be different lengths
+	DryRun     bool // Do not write any files
+	KeepGapsRd bool // Keep gaps upon reading
+	RmvGapsWrt bool // Remove gaps on output
 }
 
 // Constants
@@ -318,7 +320,7 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
 		return seqgrp, err
 	}
 
-	if s_opts.Keep_gaps_rd {
+	if s_opts.KeepGapsRd {
 		check_lengths(seqgrp.seqs)
 	}
 	return seqgrp, err
@@ -337,7 +339,7 @@ func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 	var nilstring string
 	var outfile_fp io.Writer
 	switch {
-	case s_opts.Dry_run:
+	case s_opts.DryRun:
 		outfile_fp = ioutil.Discard
 	case outseq_fname == nilstring:
 		outfile_fp = os.Stdout
@@ -358,7 +360,7 @@ func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 		fmt.Fprintf(outfile_fp, "%c%s\n", cmmt_char, seq.Cmmt())
 
 		s := seq.GetSeq()
-		if s_opts.Rmv_gaps_wrt { // we have to remove gap characters on output
+		if s_opts.RmvGapsWrt { // we have to remove gap characters on output
 			n := 0
 			for i := range s { //    So we start by looking how many non-gap
 				if s[i] != GapChar { //  characters there are.
