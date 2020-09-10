@@ -1,3 +1,4 @@
+// Bug: the KeepGapsRd flag is ignored. Fix me.
 package seq_test
 
 import (
@@ -66,11 +67,37 @@ aaa`
 	if ngot := seqgrp.NSeq(); ngot != 3 {
 		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
 	}
-	for i := 0; i< 3; i++ {
+	for i := 0; i < 3; i++ {
 		ss := seqgrp.SeqSlc()[i]
 		l := ss.Len()
-		if l != i + 1 {
-			t.Fatalf ("seqs diff length got %d wanted %d", l, i+1)
+		if l != i+1 {
+			t.Fatalf("seqs diff length got %d wanted %d", l, i+1)
+		}
+	}
+}
+
+// TestDiffLenLong has different length sequences that should be much longer
+// than one buffer.
+func TestDiffLenLong(t *testing.T) {
+	ll := []int{10000, 20000, 50000}
+	s := ">\n" + strings.Repeat("a", ll[0]) + "\n> s2\n" + strings.Repeat("c", ll[1]) +
+		"\n> s3\n" + strings.Repeat("d", ll[2])
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: true,
+		KeepGapsRd: false,
+	}
+
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
+		t.Fatal("Reading seqs failed", err)
+	}
+	if ngot := seqgrp.NSeq(); ngot != 3 {
+		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
+	}
+	for i := 0; i < len(ll); i++ {
+		l := seqgrp.SeqSlc()[i].Len()
+		if l != ll[i] {
+			t.Fatalf("long seq wanted %d got %d", ll[i], l)
 		}
 	}
 }
@@ -105,6 +132,58 @@ func TestFastaBug(t *testing.T) {
 	}
 
 }
+
+// TestRangeShort
+func TestRangeShort(t *testing.T) {
+	s := `> s1
+0123456789
+> s2
+abcdefghij
+> s3
+ABCDEFGHIJ`
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: false,
+		KeepGapsRd: false,
+		RangeStart: 2,
+		RangeEnd:   5,
+	}
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
+		t.Fatal("Reading seqs failed", err)
+	}
+	if ngot := seqgrp.NSeq(); ngot != 3 {
+		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
+	}
+	want := []string { "2345", "cdef", "CDEF"}
+	for i := 0; i < len (want); i++ {
+		got := seqgrp.SeqSlc()[i].GetSeq()
+		if string(got) != want[i] {
+			t.Fatal ("got", string(got), "wanted", want[i])
+		}
+	}
+}
+
+// TestRangeBroken should catch invalid ranges
+func TestRangeBroken(t *testing.T) {
+	s := `> s1
+0123456789
+> s2
+abcdefghij
+> s3
+ABCDEFGHIJ`
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: false,
+		KeepGapsRd: false,
+		RangeStart: 2,
+		RangeEnd:   10,
+	}
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err == nil {
+		t.Fatal("Should have failed with invalid range")
+	}
+}
+
+
 
 const (
 	no_spaces = iota
@@ -293,11 +372,12 @@ var stypedata = []struct {
 	s1    string
 	stype SeqType
 }{
+	{"> s\nACGU\n>ss\nACGT\n\n", Ntide},
+	{"> seq1\nACGT-ACGT\n> seq 2\n acgt", DNA},
 	{"> seq1\nac gt  \n> seq 2\nACGT-ACGT", DNA},
 	{"> seq1\naaa\n>seq 2\nACGT-ACG\nT", DNA},
 	{"> s1\n a c    \ng-U\n>s2\naaaa", RNA},
 	{"> s\nacgu\n>ss\nacgu\n\n", RNA},
-	{"> s\nACGU\n>ss\nACGT\n\n", Ntide},
 	{"> s\nacgu\n>ss\nACGT\n\n", Ntide},
 	{"> s1\nef", Protein},
 	{"> s1\nEF", Protein},
@@ -309,8 +389,6 @@ var stypedata = []struct {
 func TestTypes(t *testing.T) {
 	var s_opts = &Options{
 		KeepGapsRd: false,
-		DryRun:     true,
-		RmvGapsWrt: true,
 		DiffLenSeq: true,
 	}
 
