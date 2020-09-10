@@ -63,10 +63,17 @@ aaa`
 	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
-	if ngot := seqgrp.GetNSeq(); ngot != 3 {
+	if ngot := seqgrp.NSeq(); ngot != 3 {
 		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
 	}
-
+	for i := 0; i< 3; i++ {
+		ss := seqgrp.SeqSlc()
+		sss := ss[i]
+		l := sss.Len()
+		if l != i + 1 {
+			t.Fatalf ("seqs diff length got %d wanted %d", l, i+1)
+		}
+	}
 }
 
 // TestFastaBug is to track down a specific bug I had
@@ -94,8 +101,8 @@ func TestFastaBug(t *testing.T) {
 	if err := ReadFasta(strings.NewReader(sb), &seqgrp, s_opts); err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
-	if seqgrp.GetNSeq() != nseq {
-		t.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), nseq, seqgrp.GetLen())
+	if seqgrp.NSeq() != nseq {
+		t.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.NSeq(), nseq, seqgrp.GetLen())
 	}
 
 }
@@ -179,8 +186,8 @@ func TestReadFastaShort(t *testing.T) {
 		if n := seqgrp.GetLen(); n != 10 {
 			t.Fatal("seq num", i, "got", seqgrp.GetLen(), "want 10")
 		}
-		if n := seqgrp.GetNSeq(); n != 3 {
-			t.Fatal("seq loop num", i, "got nseq", seqgrp.GetNSeq(), "want 3")
+		if n := seqgrp.NSeq(); n != 3 {
+			t.Fatal("seq loop num", i, "got nseq", seqgrp.NSeq(), "want 3")
 		}
 	}
 }
@@ -210,9 +217,9 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 		t.Fatal("Reading seqs failed", err)
 	}
 
-	if seqgrp.GetNSeq() != len(seq_lengths) {
+	if seqgrp.NSeq() != len(seq_lengths) {
 		t.Fatalf("Wrote %d seqs, but read only %d.\n%s, %t",
-			len(seq_lengths), seqgrp.GetNSeq(),
+			len(seq_lengths), seqgrp.NSeq(),
 			"Spaces was set to ", spaces)
 	}
 	for i, s := range seqgrp.SeqSlc() {
@@ -527,7 +534,7 @@ func getSeqGrpSameLen() *SeqGrp {
 func TestStr2SeqGrp(t *testing.T) {
 	ss := []string{"aa", "bb", "cc"}
 	seqgrp := Str2SeqGrp(ss, "s")
-	if i := seqgrp.GetNSeq(); i != 3 {
+	if i := seqgrp.NSeq(); i != 3 {
 		t.Fatalf("Wrong num seqs, want 3, got %d", i)
 	}
 	if i := len(seqgrp.SeqSlc()[0].GetSeq()); i != 2 {

@@ -42,8 +42,8 @@ func benchmarkReadFasta(i int, b *testing.B) {
 		b.Fatal("Reading seqs failed", err)
 	}
 
-	if seqgrp.GetNSeq() != args.Nseq {
-		b.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), args.Nseq, seqgrp.GetLen())
+	if seqgrp.NSeq() != args.Nseq {
+		b.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.NSeq(), args.Nseq, seqgrp.GetLen())
 	}
 }
 
