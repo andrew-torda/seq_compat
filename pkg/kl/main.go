@@ -52,7 +52,7 @@ func extractSeqX(seqgrp *seq.SeqGrp, seqX *SeqX, flags *CmdFlag) error {
 	seqX.len = seqgrp.GetLen()
 	seqX.counts = seqgrp.GetCounts()
 	seqX.revmap = seqgrp.GetRevmap()
-	seqX.nseq = seqgrp.GetNSeq()
+	seqX.nseq = seqgrp.NSeq()
 	seqX.logbase = logbase
 	seqX.gapMapping = seqgrp.GetMapping(common.GapChar)
 	return nil
@@ -75,7 +75,7 @@ func getseqX(wg *sync.WaitGroup, flags *CmdFlag, infile string, seqX *SeqX,
 	}
 
 	s_opts := &seq.Options{
-		Keep_gaps_rd: true,
+		KeepGapsRd: true,
 	}
 
 	seqgrp, e := seq.Readfile(infile, s_opts)
@@ -84,7 +84,7 @@ func getseqX(wg *sync.WaitGroup, flags *CmdFlag, infile string, seqX *SeqX,
 		bailout()
 		return
 	}
-	if seqgrp.GetNSeq() == 0 {
+	if seqgrp.NSeq() == 0 {
 		*err = errors.New("Zero sequences found in file " + infile)
 		bailout()
 		return

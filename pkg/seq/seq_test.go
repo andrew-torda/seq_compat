@@ -1,3 +1,4 @@
+// Bug: the KeepGapsRd flag is ignored. Fix me.
 package seq_test
 
 import (
@@ -21,11 +22,12 @@ const (
 
 var seq_lengths = []int{10, 30, bigminus1, big, bigplus1}
 
-func cmmtHelp (got, want string, t *testing.T) {
+func cmmtHelp(got, want string, t *testing.T) {
 	if got != want {
 		t.Fatalf("checking comments wanted \"%s\" got \"%s\"", want, got)
 	}
 }
+
 // TestComment is to check that comments are read exactly, correctly
 func TestComment(t *testing.T) {
 	c0 := "testcomment no space"
@@ -41,8 +43,63 @@ func TestComment(t *testing.T) {
 	}
 	slc := seqgrp.SeqSlc()
 
-	cmmtHelp (slc[1].Cmmt(), c1, t)
-	cmmtHelp (slc[0].Cmmt(), c0, t)
+	cmmtHelp(slc[1].Cmmt(), c1, t)
+	cmmtHelp(slc[0].Cmmt(), c0, t)
+}
+
+// TestDiffLen checks if we can read sequences of different lengths
+func TestDiffLen(t *testing.T) {
+	s := `>s1
+a
+> s2
+aa
+> s3
+aaa`
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: true,
+		KeepGapsRd: false,
+	}
+
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
+		t.Fatal("Reading seqs failed", err)
+	}
+	if ngot := seqgrp.NSeq(); ngot != 3 {
+		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
+	}
+	for i := 0; i < 3; i++ {
+		ss := seqgrp.SeqSlc()[i]
+		l := ss.Len()
+		if l != i+1 {
+			t.Fatalf("seqs diff length got %d wanted %d", l, i+1)
+		}
+	}
+}
+
+// TestDiffLenLong has different length sequences that should be much longer
+// than one buffer.
+func TestDiffLenLong(t *testing.T) {
+	ll := []int{10000, 20000, 50000}
+	s := ">\n" + strings.Repeat("a", ll[0]) + "\n> s2\n" + strings.Repeat("c", ll[1]) +
+		"\n> s3\n" + strings.Repeat("d", ll[2])
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: true,
+		KeepGapsRd: false,
+	}
+
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
+		t.Fatal("Reading seqs failed", err)
+	}
+	if ngot := seqgrp.NSeq(); ngot != 3 {
+		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
+	}
+	for i := 0; i < len(ll); i++ {
+		l := seqgrp.SeqSlc()[i].Len()
+		if l != ll[i] {
+			t.Fatalf("long seq wanted %d got %d", ll[i], l)
+		}
+	}
 }
 
 // TestFastaBug is to track down a specific bug I had
@@ -61,20 +118,72 @@ func TestFastaBug(t *testing.T) {
 	SetFastaRdSize(200)
 
 	s_opts := &Options{
-		Vbsty: 0, Keep_gaps_rd: false,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
+		KeepGapsRd: false,
+		DryRun:     true,
+		RmvGapsWrt: true,
 	}
 
 	var seqgrp SeqGrp
 	if err := ReadFasta(strings.NewReader(sb), &seqgrp, s_opts); err != nil {
 		t.Fatal("Reading seqs failed", err)
 	}
-	if seqgrp.GetNSeq() != nseq {
-		t.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.GetNSeq(), nseq, seqgrp.GetLen())
+	if seqgrp.NSeq() != nseq {
+		t.Fatalf("Got %d wanted %d seqlen was %d\n", seqgrp.NSeq(), nseq, seqgrp.GetLen())
 	}
 
 }
+
+// TestRangeShort
+func TestRangeShort(t *testing.T) {
+	s := `> s1
+0123456789
+> s2
+abcdefghij
+> s3
+ABCDEFGHIJ`
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: false,
+		KeepGapsRd: false,
+		RangeStart: 2,
+		RangeEnd:   5,
+	}
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
+		t.Fatal("Reading seqs failed", err)
+	}
+	if ngot := seqgrp.NSeq(); ngot != 3 {
+		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
+	}
+	want := []string { "2345", "cdef", "CDEF"}
+	for i := 0; i < len (want); i++ {
+		got := seqgrp.SeqSlc()[i].GetSeq()
+		if string(got) != want[i] {
+			t.Fatal ("got", string(got), "wanted", want[i])
+		}
+	}
+}
+
+// TestRangeBroken should catch invalid ranges
+func TestRangeBroken(t *testing.T) {
+	s := `> s1
+0123456789
+> s2
+abcdefghij
+> s3
+ABCDEFGHIJ`
+	var seqgrp SeqGrp
+	s_opts := &Options{
+		DiffLenSeq: false,
+		KeepGapsRd: false,
+		RangeStart: 2,
+		RangeEnd:   10,
+	}
+	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err == nil {
+		t.Fatal("Should have failed with invalid range")
+	}
+}
+
+
 
 const (
 	no_spaces = iota
@@ -155,8 +264,8 @@ func TestReadFastaShort(t *testing.T) {
 		if n := seqgrp.GetLen(); n != 10 {
 			t.Fatal("seq num", i, "got", seqgrp.GetLen(), "want 10")
 		}
-		if n := seqgrp.GetNSeq(); n != 3 {
-			t.Fatal("seq loop num", i, "got nseq", seqgrp.GetNSeq(), "want 3")
+		if n := seqgrp.NSeq(); n != 3 {
+			t.Fatal("seq loop num", i, "got nseq", seqgrp.NSeq(), "want 3")
 		}
 	}
 }
@@ -175,10 +284,10 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 	reader := strings.NewReader(b.String())
 
 	s_opts := &Options{
-		Vbsty: 0, Keep_gaps_rd: false,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
-		DiffLenSeq:   true,
+		KeepGapsRd: false,
+		DryRun:     true,
+		RmvGapsWrt: true,
+		DiffLenSeq: true,
 	}
 
 	var seqgrp SeqGrp
@@ -186,9 +295,9 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 		t.Fatal("Reading seqs failed", err)
 	}
 
-	if seqgrp.GetNSeq() != len(seq_lengths) {
+	if seqgrp.NSeq() != len(seq_lengths) {
 		t.Fatalf("Wrote %d seqs, but read only %d.\n%s, %t",
-			len(seq_lengths), seqgrp.GetNSeq(),
+			len(seq_lengths), seqgrp.NSeq(),
 			"Spaces was set to ", spaces)
 	}
 	for i, s := range seqgrp.SeqSlc() {
@@ -218,7 +327,7 @@ func TestEmpty(t *testing.T) {
 		}
 
 		f_tmp.Close()
-		s_opts := &Options{Vbsty: 0, Keep_gaps_rd: true, Dry_run: true}
+		s_opts := &Options{KeepGapsRd: true, DryRun: true}
 		if _, err := Readfile(f_tmp.Name(), s_opts); err == nil {
 			t.Fatal("should generate error on zero-length file")
 		}
@@ -263,11 +372,12 @@ var stypedata = []struct {
 	s1    string
 	stype SeqType
 }{
+	{"> s\nACGU\n>ss\nACGT\n\n", Ntide},
+	{"> seq1\nACGT-ACGT\n> seq 2\n acgt", DNA},
 	{"> seq1\nac gt  \n> seq 2\nACGT-ACGT", DNA},
 	{"> seq1\naaa\n>seq 2\nACGT-ACG\nT", DNA},
 	{"> s1\n a c    \ng-U\n>s2\naaaa", RNA},
 	{"> s\nacgu\n>ss\nacgu\n\n", RNA},
-	{"> s\nACGU\n>ss\nACGT\n\n", Ntide},
 	{"> s\nacgu\n>ss\nACGT\n\n", Ntide},
 	{"> s1\nef", Protein},
 	{"> s1\nEF", Protein},
@@ -278,10 +388,8 @@ var stypedata = []struct {
 // TestTypes checks the code for recognising RNA/DNA/Protein/whatever types.
 func TestTypes(t *testing.T) {
 	var s_opts = &Options{
-		Vbsty: 0, Keep_gaps_rd: false,
-		Dry_run:      true,
-		Rmv_gaps_wrt: true,
-		DiffLenSeq:   true,
+		KeepGapsRd: false,
+		DiffLenSeq: true,
 	}
 
 	for tnum, x := range stypedata {
@@ -376,9 +484,9 @@ func wrtTmp(s string) (string, error) {
 // TestEntropy checks the entropy calculation.
 func TestEntropy(t *testing.T) {
 	s_opts := &Options{
-		Vbsty: 0, Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: false}
+		KeepGapsRd: true,
+		DryRun:     true,
+		RmvGapsWrt: false}
 
 	for tnum, x := range entdata {
 		var seqgrp SeqGrp
@@ -412,9 +520,9 @@ DEF
 > more here in seq2
 DEF`
 	s_opts := &Options{
-		Vbsty: 0, Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: false}
+		KeepGapsRd: true,
+		DryRun:     true,
+		RmvGapsWrt: false}
 
 	var seqgrp SeqGrp
 
@@ -463,9 +571,9 @@ func TestCompat(t *testing.T) {
 		{ufset1, []float32{1, 0.5, 0}},
 	}
 	s_opts := &Options{
-		Vbsty: 0, Keep_gaps_rd: true,
-		Dry_run:      true,
-		Rmv_gaps_wrt: false}
+		KeepGapsRd: true,
+		DryRun:     true,
+		RmvGapsWrt: false}
 
 	for i, exp := range expected {
 		var err error
@@ -503,7 +611,7 @@ func getSeqGrpSameLen() *SeqGrp {
 func TestStr2SeqGrp(t *testing.T) {
 	ss := []string{"aa", "bb", "cc"}
 	seqgrp := Str2SeqGrp(ss, "s")
-	if i := seqgrp.GetNSeq(); i != 3 {
+	if i := seqgrp.NSeq(); i != 3 {
 		t.Fatalf("Wrong num seqs, want 3, got %d", i)
 	}
 	if i := len(seqgrp.SeqSlc()[0].GetSeq()); i != 2 {
@@ -576,26 +684,7 @@ func TestGetNSeq(t *testing.T) {
 		if nsym != a.nsym {
 			t.Fatalf("Wrong nsym. Wanted %d, got %d", a.nsym, nsym)
 		}
-	} /*
-		for _, a := range testdat {
-			var wg sync.WaitGroup
-			var wgNil *sync.WaitGroup
-			seqgrp1 := Str2SeqGrp(a.ss)
-			seqgrp2 := Str2SeqGrp(a.tt)
-
-			uchan := make(chan [MaxSym]bool)
-			wg.Add(1)
-			go seqgrp1.SetSymUsed(&wg, uchan)
-
-			seqgrp2.SetSymUsed(wgNil, uchan)
-			wg.Wait()
-			if seqgrp1.GetNSym() != seqgrp2.GetNSym() {
-				t.Fatalf("nsym mismatch %d vs %d", seqgrp1.GetNSym(), seqgrp2.GetNSym())
-			}
-			if n := seqgrp1.GetNSym(); n != a.ncmb {
-				t.Fatalf("combined nsyms, wanted %d got %d", a.ncmb, n)
-			}
-		} */
+	}
 }
 
 // TestSeqInfo tests some seq manipulation functions

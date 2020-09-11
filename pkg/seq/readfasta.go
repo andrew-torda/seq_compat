@@ -36,9 +36,12 @@ type lexer struct {
 	seqblock   []byte // Big block where all the sequences are placed
 	err        error  // error passed back to caller at end
 	expLen     int    // Expected length of sequences. If zero, not used.
+	rangeStart int    // Start and end of sequence range to be kept. Copied
+	rangeEnd   int    // from seq options. Zero means keep everything.
 	term       byte   // terminator of comments or sequences
-	diffLenSeq bool   // are all sequences the same length ?
-	notfirst   bool   // Not the first call
+	memtype    byte   // diff length sequences, same or a range from each seq
+	//	diffLenSeq bool   // are all sequences the same length ?
+	notfirst bool // Not the first call
 }
 
 const defaultReadSize = 4 * 1024
@@ -53,6 +56,12 @@ func setFastaRdSize(i int) {
 	}
 	rdsize = i
 }
+
+const (
+	diffLen byte = iota
+	sameLen
+	withRange
+)
 
 // NewItem is used by sync.pool.
 func newItem() interface{} { return new(item) }
@@ -120,18 +129,26 @@ func (l *lexer) next() {
 
 // firstCall is called when we have read up the first sequence and can
 // allocate all the space we need.
-func firstCall(l *lexer) {
-	nseq, err := numseq.ByReading(l.rdr) // Swap to fancier version with
-	if err != nil {                      // better memory allocation
-		l.err = err
-		return
+func firstCall(l *lexer) error {
+	nseq, err := numseq.ByReading(l.rdr)
+	if err != nil {
+		return err
 	}
 	if nseq < 1 {
-		l.err = errors.New("no sequences found")
-		return
+		return errors.New("no sequences found")
 	}
 	l.expLen = len(l.seq)
-	l.seqblock = make([]byte, 0, l.expLen*nseq)
+	var sz int
+	if l.rangeEnd >= l.expLen {
+		return fmt.Errorf("invalid seq range %d to %d, length is only %d", l.rangeStart, l.rangeEnd, l.expLen)
+	}
+	if l.rangeStart != 0 || l.rangeEnd != 0 {
+		sz = l.rangeEnd - l.rangeStart + 1
+	} else {
+		sz = l.expLen
+	}
+	l.seqblock = make([]byte, 0, sz*nseq)
+	return nil
 }
 
 type stateFn func(*lexer) stateFn
@@ -140,6 +157,7 @@ type stateFn func(*lexer) stateFn
 // On the first call, we check if the sequences should be of the same length.
 // If so, we allocate a single large block for sequences.
 func seqFn(l *lexer) stateFn {
+	const bustLen = "seqs not same length, wanted %d, got %d"
 	item := <-l.ichan
 	if item == nil || l.err != nil {
 		return nil
@@ -154,27 +172,51 @@ func seqFn(l *lexer) stateFn {
 			l.err = errors.New("Zero length sequence after" + l.cmmt)
 			return nil
 		}
-		if !l.notfirst && !l.diffLenSeq { // on first sequence
+
+		if !l.notfirst && (l.memtype == sameLen || l.memtype == withRange) {
 			var tmp []byte
 			l.notfirst = true
-			firstCall(l)
-			tmp = append(tmp, l.seq...)
-			l.seq = l.seqblock
-			l.seq = append(l.seq, tmp...)
-		}
-		seq := seq{cmmt: l.cmmt, seq: l.seq}
-		l.seqgrp.seqs = append(l.seqgrp.seqs, seq)
-		l.cmmt = ""
-		if l.seqblock == nil { // Not using single block for sequences
-			l.seq = nil
-		} else {
-			nlen := len(l.seqblock)
-			if l.expLen != len(l.seq) {
-				l.err = fmt.Errorf("seqs not same length, wanted %d, got %d", l.expLen, len(l.seq))
+			if l.err = firstCall(l); l.err != nil { // Just allocates the space
 				return nil
 			}
+			if l.memtype == sameLen {
+				tmp := append(tmp, l.seq...)  // Save first seq
+				l.seq = l.seqblock            // where we will be saving all seqs
+				l.seq = append(l.seq, tmp...) // save slice we put aside
+			}
+		}
+		if l.memtype == sameLen || l.memtype == withRange {
+			if l.expLen != len(l.seq) {
+				l.err = fmt.Errorf(bustLen, l.expLen, len(l.seq))
+				return nil
+			}
+		}
+
+		var vseq seq
+		switch l.memtype {
+		case diffLen:
+			vseq = seq{cmmt: l.cmmt, seq: l.seq}
+		case sameLen:
+			vseq = seq{cmmt: l.cmmt, seq: l.seq}
+		case withRange:
+			toUse := l.seq[l.rangeStart:l.rangeEnd+1]
+			start := len(l.seqblock)
+			l.seqblock = append(l.seqblock, toUse...)
+			vseq = seq{cmmt: l.cmmt, seq: l.seqblock[start : start+len(toUse)]}
+		}
+
+		l.seqgrp.seqs = append(l.seqgrp.seqs, vseq)
+		l.cmmt = ""
+		switch l.memtype {
+		case diffLen:
+			l.seq = nil // Not using single block for sequences. Forces fresh memory on next.
+		case sameLen:
+			nlen := len(l.seqblock)
 			l.seqblock = l.seqblock[:nlen+len(l.seq)]
 			l.seq = l.seqblock[len(l.seqblock):]
+		case withRange:
+			l.seqblock = append(l.seqblock, l.seq[l.rangeStart:l.rangeEnd]...)
+			l.seq = l.seq[:0]
 		}
 		return cmmtFn
 	}
@@ -197,19 +239,43 @@ func cmmtFn(l *lexer) stateFn {
 	return cmmtFn
 }
 
+// memtype decides how we will store the sequences. If they are of different
+// lengths, they just get individually allocated. If they are the same length,
+// we first allocate a pool and adjust pointers within the pool. If we are
+// only going to keep a piece of each sequence, we allocate the pool, but
+// read sequences into a temporary buffer, but then copy over the
+// wanted bits of the buffer.
+func memtype(s_opts *Options) byte {
+	if s_opts.DiffLenSeq {
+		return diffLen
+	}
+	if s_opts.RangeStart == 0 && s_opts.RangeEnd == 0 {
+		return sameLen
+	}
+	return withRange
+}
+
 // ReadFasta reads fasta formatted files.
 func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
+	if s_opts.DiffLenSeq && (s_opts.RangeStart != 0 || s_opts.RangeEnd != 0) {
+		return errors.New("If seqs are different lengths, cannot specify seq range")
+	}
 	l := lexer{
 		rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL,
-		diffLenSeq: s_opts.DiffLenSeq,
+		rangeStart: s_opts.RangeStart, rangeEnd: s_opts.RangeEnd,
+		memtype: memtype(s_opts),
+		//		diffLenSeq: s_opts.DiffLenSeq,
 	}
 
 	go l.next()
 	for state := cmmtFn; state != nil; {
 		state = state(&l)
 	}
-	if seqgrp.GetNSeq() == 0 {
-		l.err = errors.New("No sequences found")
+	if l.err != nil {
+		return l.err
 	}
-	return l.err
+	if seqgrp.NSeq() == 0 {
+		return errors.New("No sequences found")
+	}
+	return nil
 }
