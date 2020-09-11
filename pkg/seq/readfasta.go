@@ -1,4 +1,21 @@
 // Reader for fasta format files.
+// Memory explanation...
+// There are three ways to allocate memory, crammed into one function.
+//  1. If we have sequences of different lengths, l.seq is cleared after
+//     each sequence and we just keep appending to it. l.seq becomes part
+//     of the new sequence. This means each sequence is its own allocation.
+//     We could change this to put all sequences into one block which grows.
+//  2. If we have a set of aligned sequences, they are all the same length
+//     and we probably are keeping gaps. We do a scan of the file, estimate
+//     the number of sequences. We read the first sequence to find the length.
+//     Then allocate one block for all sequences. We save the first sequence
+//     and set l.seq to point directory into this block. There should be no
+//     more unnecessary copying of bytes from sequences.
+//  3. Sequences are the same length, but we only want to keep a range from
+//     each sequence. We allocate a block for all sequences as in case 2.
+//     l.seq is a re-used buffer. After each sequence is complete, we copy
+//     the region we want into l.seqblock and set the used part of the buffer
+//     to length zero.
 
 package seq
 
@@ -86,7 +103,7 @@ func (l *lexer) next() {
 				curbuf = &backbuf1
 			}
 			l.input = (*curbuf)[:]
-			if n, err := l.rdr.Read(l.input); n != rdsize { // rdsize
+			if n, err := l.rdr.Read(l.input); n != rdsize { // EOF or error?
 				l.input = l.input[:n]
 				if n == 0 { // really finished
 					if err != nil && err != io.EOF {
@@ -130,6 +147,7 @@ func (l *lexer) next() {
 // firstCall is called when we have read up the first sequence and can
 // allocate all the space we need.
 func firstCall(l *lexer) error {
+	const invalidRange = "invalid seq range %d to %d, length is only %d"
 	nseq, err := numseq.ByReading(l.rdr)
 	if err != nil {
 		return err
@@ -140,7 +158,7 @@ func firstCall(l *lexer) error {
 	l.expLen = len(l.seq)
 	var sz int
 	if l.rangeEnd >= l.expLen {
-		return fmt.Errorf("invalid seq range %d to %d, length is only %d", l.rangeStart, l.rangeEnd, l.expLen)
+		return fmt.Errorf(invalidRange, l.rangeStart, l.rangeEnd, l.expLen)
 	}
 	if l.rangeStart != 0 || l.rangeEnd != 0 {
 		sz = l.rangeEnd - l.rangeStart + 1
@@ -199,7 +217,7 @@ func seqFn(l *lexer) stateFn {
 		case sameLen:
 			vseq = seq{cmmt: l.cmmt, seq: l.seq}
 		case withRange:
-			toUse := l.seq[l.rangeStart:l.rangeEnd+1]
+			toUse := l.seq[l.rangeStart : l.rangeEnd+1]
 			start := len(l.seqblock)
 			l.seqblock = append(l.seqblock, toUse...)
 			vseq = seq{cmmt: l.cmmt, seq: l.seqblock[start : start+len(toUse)]}
@@ -255,16 +273,25 @@ func memtype(s_opts *Options) byte {
 	return withRange
 }
 
+// checkBroken looks for inconsistent flags or code problems
+func checkBroken(s_opts *Options) error {
+	if s_opts.DiffLenSeq && (s_opts.RangeStart != 0 || s_opts.RangeEnd != 0) {
+		return errors.New("Can't use range option. Sequences of different lengths")
+	}
+	if !s_opts.KeepGapsRd {
+		return errors.New("Option to delete gaps not written yet")
+	}
+}
+
 // ReadFasta reads fasta formatted files.
 func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
-	if s_opts.DiffLenSeq && (s_opts.RangeStart != 0 || s_opts.RangeEnd != 0) {
-		return errors.New("If seqs are different lengths, cannot specify seq range")
+	if err := checkBroken(s_opts); err != nil {
+		return err
 	}
 	l := lexer{
 		rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL,
 		rangeStart: s_opts.RangeStart, rangeEnd: s_opts.RangeEnd,
 		memtype: memtype(s_opts),
-		//		diffLenSeq: s_opts.DiffLenSeq,
 	}
 
 	go l.next()
