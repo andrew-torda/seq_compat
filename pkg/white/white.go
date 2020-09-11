@@ -79,3 +79,27 @@ white:
 	}
 	*sIn = s
 }
+
+// CharRemove is like white.Remove, but removes a single, arbitrary
+// character, in place. One can do this with the libary Replace function,
+// but this version is not only faster, but also operates in place. It
+// does not make a copy of the slice. If you are processing 10^6 strings,
+// it does 10^6 fewer allocations.
+func CharRemove (sIn *[]byte, c byte) {
+	s := *sIn
+	i, j := 0, 0
+	for ; j < len(s); i, j = i+1, j+1 {
+		for j < len(s) {
+			if s[j] == c {
+				j++
+			} else {
+				break
+			}
+		}
+		if j >= len(s) {
+			break
+		}
+		s[i] = s[j]
+	}
+	*sIn = s[:i] // This is the truncation
+}

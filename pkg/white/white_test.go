@@ -46,3 +46,33 @@ func TestWhiteRemove(t *testing.T) {
 		testoneversion(f, t)
 	}
 }
+
+func TestCharRemove(t *testing.T) {
+	want := "abcdefghijk"
+	ss := []string{
+		want,
+		"abcdefghijk-",
+		"abcdefghijk--",
+		"abcdefghij-k-",
+		"abcdefghij--k-",
+		"abcdefghij--k--",
+		"-abcdefghij--k--",
+		"--abcdefghij--k--",
+		"-a-bcdefghij--k--",
+		"-a-b-c-d-e-f-g-h-i-j-k",
+		"a-b-c-de-fgh-ijk",
+		"---abcdefghijk----",
+		"a---b------cdefghijk--",
+		"a--b--c--d---e----f-----ghijk",
+		"a-bcdefghij---k",
+		"abcdefghij-k",
+	}
+	for i, s := range ss {
+		b := []byte(s)
+		CharRemove(&b, '-')
+		if string(b) != want {
+			t.Fatalf(`char remove broke on "%s" got "%s"`, string(b), ss[i])
+		}
+	}
+
+}
