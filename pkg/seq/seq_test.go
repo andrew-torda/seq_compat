@@ -54,11 +54,11 @@ a
 > s2
 aa
 > s3
-aaa`
+aa-a`
 	var seqgrp SeqGrp
 	s_opts := &Options{
 		DiffLenSeq: true,
-		KeepGapsRd: false,
+		RmvGapsRd:  true,
 	}
 
 	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
@@ -85,7 +85,7 @@ func TestDiffLenLong(t *testing.T) {
 	var seqgrp SeqGrp
 	s_opts := &Options{
 		DiffLenSeq: true,
-		KeepGapsRd: false,
+		RmvGapsRd:  true,
 	}
 
 	if err := ReadFasta(strings.NewReader(s), &seqgrp, s_opts); err != nil {
@@ -117,11 +117,7 @@ func TestFastaBug(t *testing.T) {
 
 	SetFastaRdSize(200)
 
-	s_opts := &Options{
-		KeepGapsRd: false,
-		DryRun:     true,
-		RmvGapsWrt: true,
-	}
+	s_opts := &Options{}
 
 	var seqgrp SeqGrp
 	if err := ReadFasta(strings.NewReader(sb), &seqgrp, s_opts); err != nil {
@@ -143,8 +139,6 @@ abcdefghij
 ABCDEFGHIJ`
 	var seqgrp SeqGrp
 	s_opts := &Options{
-		DiffLenSeq: false,
-		KeepGapsRd: false,
 		RangeStart: 2,
 		RangeEnd:   5,
 	}
@@ -154,11 +148,11 @@ ABCDEFGHIJ`
 	if ngot := seqgrp.NSeq(); ngot != 3 {
 		t.Fatalf("Seqs of diff length got %d wanted 3 seqs", ngot)
 	}
-	want := []string { "2345", "cdef", "CDEF"}
-	for i := 0; i < len (want); i++ {
+	want := []string{"2345", "cdef", "CDEF"}
+	for i := 0; i < len(want); i++ {
 		got := seqgrp.SeqSlc()[i].GetSeq()
 		if string(got) != want[i] {
-			t.Fatal ("got", string(got), "wanted", want[i])
+			t.Fatal("got", string(got), "wanted", want[i])
 		}
 	}
 }
@@ -173,8 +167,6 @@ abcdefghij
 ABCDEFGHIJ`
 	var seqgrp SeqGrp
 	s_opts := &Options{
-		DiffLenSeq: false,
-		KeepGapsRd: false,
 		RangeStart: 2,
 		RangeEnd:   10,
 	}
@@ -182,8 +174,6 @@ ABCDEFGHIJ`
 		t.Fatal("Should have failed with invalid range")
 	}
 }
-
-
 
 const (
 	no_spaces = iota
@@ -284,7 +274,7 @@ func innerWriteReadSeqs(t *testing.T, spaces bool) {
 	reader := strings.NewReader(b.String())
 
 	s_opts := &Options{
-		KeepGapsRd: false,
+		RmvGapsRd:  true,
 		DryRun:     true,
 		RmvGapsWrt: true,
 		DiffLenSeq: true,
@@ -327,7 +317,7 @@ func TestEmpty(t *testing.T) {
 		}
 
 		f_tmp.Close()
-		s_opts := &Options{KeepGapsRd: true, DryRun: true}
+		s_opts := &Options{}
 		if _, err := Readfile(f_tmp.Name(), s_opts); err == nil {
 			t.Fatal("should generate error on zero-length file")
 		}
@@ -388,7 +378,7 @@ var stypedata = []struct {
 // TestTypes checks the code for recognising RNA/DNA/Protein/whatever types.
 func TestTypes(t *testing.T) {
 	var s_opts = &Options{
-		KeepGapsRd: false,
+		RmvGapsRd: true,
 		DiffLenSeq: true,
 	}
 
@@ -483,10 +473,7 @@ func wrtTmp(s string) (string, error) {
 
 // TestEntropy checks the entropy calculation.
 func TestEntropy(t *testing.T) {
-	s_opts := &Options{
-		KeepGapsRd: true,
-		DryRun:     true,
-		RmvGapsWrt: false}
+	s_opts := &Options{}
 
 	for tnum, x := range entdata {
 		var seqgrp SeqGrp
@@ -519,10 +506,7 @@ ABC
 DEF
 > more here in seq2
 DEF`
-	s_opts := &Options{
-		KeepGapsRd: true,
-		DryRun:     true,
-		RmvGapsWrt: false}
+	s_opts := &Options{}
 
 	var seqgrp SeqGrp
 
@@ -570,10 +554,7 @@ func TestCompat(t *testing.T) {
 		{ufset2, []float32{0, 0, 1, 1, 1, 0, 0, 0, 0.333, 0.667}},
 		{ufset1, []float32{1, 0.5, 0}},
 	}
-	s_opts := &Options{
-		KeepGapsRd: true,
-		DryRun:     true,
-		RmvGapsWrt: false}
+	s_opts := &Options{}
 
 	for i, exp := range expected {
 		var err error

@@ -31,7 +31,7 @@ X-BAAA-
 var sets = []string{set1, set2}
 
 func ExampleRawCount() {
-	s_opts := &Options{KeepGapsRd: true, DryRun: true}
+	s_opts := &Options{}
 
 	for _, s := range sets {
 		f_tmp, err := wrtTmp(s)
@@ -68,7 +68,7 @@ func ExampleRawCount() {
 }
 
 func scaledcheck(gapsAreChar bool) {
-	s_opts := &Options{KeepGapsRd: true, DryRun: true}
+	s_opts := &Options{}
 	inner := func(f_tmp string, gapsAreChar bool) {
 		if seqgrp, err := Readfile(f_tmp, s_opts); err != nil {
 			log.Fatal(err)

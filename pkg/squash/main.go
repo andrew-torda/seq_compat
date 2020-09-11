@@ -11,10 +11,7 @@ import (
 
 // MyMain is the top level main, after parsing the command line.
 func MyMain(seqstring, infile, outfile string) int {
-	s_opts := &seq.Options{
-		KeepGapsRd: true,
-		DryRun:      false,
-		RmvGapsWrt: false}
+	s_opts := &seq.Options{}
 
 	seqgrp, err := seq.Readfile(infile, s_opts)
 	if err != nil {

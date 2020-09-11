@@ -74,9 +74,7 @@ func getseqX(wg *sync.WaitGroup, flags *CmdFlag, infile string, seqX *SeqX,
 		<-frmMrgChn
 	}
 
-	s_opts := &seq.Options{
-		KeepGapsRd: true,
-	}
+	s_opts := &seq.Options{}
 
 	seqgrp, e := seq.Readfile(infile, s_opts)
 	if e != nil {

@@ -54,7 +54,7 @@ type Options struct {
 	RangeEnd   int  // If Start and End are zero, keep everything.
 	DiffLenSeq bool // false, unless we expect sequences to be different lengths
 	DryRun     bool // Do not write any files
-	KeepGapsRd bool // Keep gaps upon reading
+	RmvGapsRd  bool // Remove gaps on reading. Usually not.
 	RmvGapsWrt bool // Remove gaps on output
 }
 
@@ -320,7 +320,7 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
 		return seqgrp, err
 	}
 
-	if s_opts.KeepGapsRd {
+	if ! s_opts.RmvGapsRd {
 		check_lengths(seqgrp.seqs)
 	}
 	return seqgrp, err

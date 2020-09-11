@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
-
+	"github.com/andrew-torda/seq_compat/pkg/seq/common"
 	"github.com/andrew-torda/seq_compat/pkg/numseq"
 	"github.com/andrew-torda/seq_compat/pkg/white"
 )
@@ -57,8 +57,8 @@ type lexer struct {
 	rangeEnd   int    // from seq options. Zero means keep everything.
 	term       byte   // terminator of comments or sequences
 	memtype    byte   // diff length sequences, same or a range from each seq
-	//	diffLenSeq bool   // are all sequences the same length ?
-	notfirst bool // Not the first call
+	RmvGapsRd bool   // copied from s_opts
+	notfirst   bool   // Not the first call
 }
 
 const defaultReadSize = 4 * 1024
@@ -182,6 +182,9 @@ func seqFn(l *lexer) stateFn {
 	}
 
 	white.Remove(&item.data)
+	if l.RmvGapsRd {
+		white.CharRemove (&item.data, common.GapChar)
+	}
 	l.seq = append(l.seq, item.data...)
 	complete := item.complete
 	l.itempool.Put(item)
@@ -278,9 +281,7 @@ func checkBroken(s_opts *Options) error {
 	if s_opts.DiffLenSeq && (s_opts.RangeStart != 0 || s_opts.RangeEnd != 0) {
 		return errors.New("Can't use range option. Sequences of different lengths")
 	}
-	if !s_opts.KeepGapsRd {
-		return errors.New("Option to delete gaps not written yet")
-	}
+	return nil
 }
 
 // ReadFasta reads fasta formatted files.
@@ -290,6 +291,7 @@ func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	}
 	l := lexer{
 		rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL,
+		RmvGapsRd: s_opts.RmvGapsRd,
 		rangeStart: s_opts.RangeStart, rangeEnd: s_opts.RangeEnd,
 		memtype: memtype(s_opts),
 	}

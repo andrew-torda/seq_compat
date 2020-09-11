@@ -6,9 +6,24 @@ It works under linux, windows and maybe on a mac. I don't have a mac
 
 Is go installed on your machine ? If so,
   go get github.com/andrew-torda/seq_compat
-
+If you then
+ go build ./...
+ go test ./...
+You will end up with an executable in each of the directories under `cmd`.
+Doing
+ go install ./...
+Will put these executables somewhere.
 otherwise,
  git clone https://github.com/andrew-torda/seq_compat.git
+
+## Documentation
+From the top level, you can type
+ go doc entropy
+or
+ go doc kl
+or
+ go doc squash
+to see a brief description. Less interesting, is `go doc randseq`.
 
 # programs
 ## kl

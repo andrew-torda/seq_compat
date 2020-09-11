@@ -29,7 +29,6 @@ func benchmarkReadFasta(i int, b *testing.B) {
 
 	reader := strings.NewReader(sb.String())
 	s_opts := &seq.Options{
-		KeepGapsRd: false,
 		DryRun:     true,
 		RmvGapsWrt: true,
 	}

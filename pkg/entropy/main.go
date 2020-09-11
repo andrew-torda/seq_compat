@@ -38,13 +38,13 @@ func writeNtrpy(args *ntrpyargs) error {
 		fp = os.Stdout
 	}
 	// set up the gaps.
-	if args.gapfrac == nil {  // Could be that there are no gaps.
-		args.gapfrac = make([]float32, len (args.entropy))
+	if args.gapfrac == nil { // Could be that there are no gaps.
+		args.gapfrac = make([]float32, len(args.entropy))
 		for i, _ := range args.entropy { // To avoid if statements below
 			args.gapfrac[i] = 0 // make an array and just fill it with zeroes.
 		}
 	}
-	fmt.Fprintln (fp, headings1)
+	fmt.Fprintln(fp, headings1)
 	for i, v := range args.entropy {
 		fmt.Fprintf(fp, "%d,%.2f,%.2f", i+1+args.offset, v, 1-args.gapfrac[i])
 		if args.refseq != nil {
@@ -65,14 +65,10 @@ type CmdFlag struct {
 // Mymain is the main function for calculating entropy and writing to a file
 func Mymain(flags *CmdFlag, infile, outfile string) error {
 	var err error
-	s_opts := &seq.Options{
-		KeepGapsRd: true,
-		DryRun:      true,
-		RmvGapsWrt: true,
-	}
+	s_opts := &seq.Options{}
 
 	var ntrpyargs = &ntrpyargs{ // start setting up things to go
-		outfile: outfile,       // to the printing function later
+		outfile: outfile, // to the printing function later
 		offset:  flags.Offset}
 
 	seqgrp, err := seq.Readfile(infile, s_opts)
@@ -90,9 +86,9 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 	}
 	seqgrp.Upper()
 	ntrpyargs.gapfrac = seqgrp.GapFrac()
-	ntrpyargs.entropy = make ([]float32, seqgrp.GetLen())
+	ntrpyargs.entropy = make([]float32, seqgrp.GetLen())
 	seqgrp.Entropy(flags.GapsAreChar, ntrpyargs.entropy)
-	
+
 	if err = writeNtrpy(ntrpyargs); err != nil {
 		return err
 	}
