@@ -4,8 +4,8 @@
 
 Randseq is for making random sequences for testing the code.
 Usage:
-	randseq [options] nseq length
-will generate nseq sequences of length length.
+	randseq [options] fname nseq length
+will generate nseq sequences of length length and write them to fname.
 
 Flags:
 	-g
@@ -18,8 +18,8 @@ Flags:
 
 We are most interested in benchmarking and parsing, so the content is not so important.
 The only question that comes up is white space and gaps.
-Whitespace should generally be unpredictable, so we encounter funny cases.
-There is a flag which tells us whether we have gaps.
+Whitespace should generally be unpredictable, so we generate funny cases.
+There is a flag (-g) which tells us whether we have gaps.
 Most programs we use expect sequences to be the same length (after gap removal),
 so we can provoke errors and have different lengths.
 

@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	uStr := "usage: randseqs [options] nseq nlen\n...output is written to stdout"
+	uStr := "usage: randseqs [options] fname nseq nlen\n...output is written to fname"
 	f := flag.NewFlagSet("randseq", flag.ExitOnError)
 	const iseed int64 = 1637
 	var args randseq.RandSeqArgs
