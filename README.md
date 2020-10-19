@@ -39,7 +39,7 @@ Takes an input multiple sequence alignment and a reference sequence. It produced
 Generates random, fasta-formatted sequences. It is only useful for testing. The sequences are pleasantly awful with white space all over place.
 
 ## numseq
-This is also only used in testing. It is really only a wrapper for the package in the `pkg/numseq` directory. This executable does not do anything clever than 
+This is also only used in testing. It is really only a wrapper for the package in the `pkg/numseq` directory. This executable does not do anything cleverer than 
  grep '>' | wc -l
 although it is much faster.
 
