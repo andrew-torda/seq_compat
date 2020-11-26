@@ -13,10 +13,9 @@ import (
 	"path"
 )
 
-func usage() int {
+func usage() {
 	fmt.Fprintln(os.Stderr, "usage:", path.Base(os.Args[0]), "[infile [outfile]]")
 	flag.PrintDefaults()
-	return (ExitUsageError)
 }
 
 func main() {
@@ -27,7 +26,7 @@ func main() {
 	flag.IntVar(&flags.NSym, "n", -1, "num symbols, guessed by default, 4 for DNA")
 	flag.StringVar(&outfile, "o", "", "output file name, default stdout")
 	flag.StringVar(&flags.RefSeq, "r", "", "reference sequence, check compatibility")
-
+    flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() > 0 {
 		infile = flag.Arg(0)
