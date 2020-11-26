@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/andrew-torda/seq_compat/pkg/seq"
 )
@@ -60,13 +61,16 @@ type CmdFlag struct {
 	GapsAreChar bool   // Do we keep gaps ? Are gaps a valid symbol ?
 	NSym        int    // Set the number of symbols in sequences
 	RefSeq      string // A reference seq, whose compatibility will be calculated
+	Time        bool   // do we want to print out run time ?
 }
 
 // Mymain is the main function for calculating entropy and writing to a file
 func Mymain(flags *CmdFlag, infile, outfile string) error {
 	var err error
 	s_opts := &seq.Options{}
-
+	startTime := time.Now()
+	if flags.Time {
+	}
 	var ntrpyargs = &ntrpyargs{ // start setting up things to go
 		outfile: outfile, // to the printing function later
 		offset:  flags.Offset}
@@ -91,6 +95,10 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 
 	if err = writeNtrpy(ntrpyargs); err != nil {
 		return err
+	}
+	if flags.Time {
+		Dtion := time.Since(startTime)
+		fmt.Println("finished after", Dtion.Milliseconds(), "ms")
 	}
 	return nil
 }
