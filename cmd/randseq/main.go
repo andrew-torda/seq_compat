@@ -21,6 +21,7 @@ func main() {
 	f.BoolVar(&args.NoGap, "g", false, "do not put gaps in sequences")
 	f.BoolVar(&args.MkErr, "e", false, "provoke errors")
 	f.Int64Var(&args.Iseed, "r", iseed, "random number seed")
+	f.BoolVar (&args.NoSpace, "s", false, "do not put spaces in sequences")
 	if err := f.Parse(os.Args[1:]); err != nil {
 		fmt.Fprintln (f.Output(), err)
 		os.Exit(ExitUsageError)
