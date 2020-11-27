@@ -68,8 +68,12 @@ type CmdFlag struct {
 func Mymain(flags *CmdFlag, infile, outfile string) error {
 	var err error
 	s_opts := &seq.Options{}
-	startTime := time.Now()
 	if flags.Time {
+		startTime := time.Now()
+		end := func () { // Wrapping in a closure seems to be helpful. Gives the right time.
+			fmt.Println("finished after", time.Since(startTime).Milliseconds(), "ms")
+		}
+		defer end()
 	}
 	var ntrpyargs = &ntrpyargs{ // start setting up things to go
 		outfile: outfile, // to the printing function later
@@ -95,10 +99,6 @@ func Mymain(flags *CmdFlag, infile, outfile string) error {
 
 	if err = writeNtrpy(ntrpyargs); err != nil {
 		return err
-	}
-	if flags.Time {
-		Dtion := time.Since(startTime)
-		fmt.Println("finished after", Dtion.Milliseconds(), "ms")
 	}
 	return nil
 }
