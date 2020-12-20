@@ -3,9 +3,9 @@
 package entropy_test
 
 import (
+	. "github.com/andrew-torda/seq_compat/pkg/entropy"
 	"github.com/andrew-torda/seq_compat/pkg/seq"
 	"github.com/andrew-torda/seq_compat/pkg/seq/common"
-	. "github.com/andrew-torda/seq_compat/pkg/entropy"
 	"math"
 	"os"
 	"testing"
@@ -28,8 +28,16 @@ ACGT
 var seqstring2 string = `> s1
 ACGT
 >s2
-ACGT
-`
+ACGT`
+
+var seqstring3 string = `> s1
+aaaaa
+> s2
+aaa-c
+> s3
+aa--d
+> s4
+a---e`
 
 func ExampleMain(t *testing.T) {
 	var fname string
@@ -82,3 +90,30 @@ func Test2(t *testing.T) {
 		}
 	}
 }
+
+// testChimera see what happens if we write a chimera format file
+/*  This is commented out while I try to think of a way to test the output.
+func TestChimera(t *testing.T) {
+	var fname string
+	var err error
+	if fname, err = common.WrtTemp(seqstring3); err != nil {
+		t.Fatal("Fail writing test file")
+	}
+	defer os.Remove(fname)
+	var tmpoutName string
+	if tmpout, err := ioutil.TempFile("", "del_me"); err != nil {
+		t.Fatal("Fail making test file", err.Error())
+	} else {
+		tmpoutName = tmpout.Name()
+		defer os.Remove(tmpoutName)
+		tmpout.Close()
+		fmt.Println ("tmpout is ", tmpoutName)
+	}
+	flags := CmdFlag{
+		Chimera: tmpoutName,
+	}
+	if err := Mymain(&flags, fname, tmpoutName); err != nil {
+		t.Fatal("bust with chimera file", err)
+	}
+}
+*/
