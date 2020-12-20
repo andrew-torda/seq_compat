@@ -18,8 +18,10 @@ Usage:
 	entropy [flags] [input]
 
 The flags are:
+	-c chimera_attribute_file
+		Write conservation data to a file in the format of an attribute file that chimera can read and use for coloring a structure.
 	-f oFfset
-		Output for plotting numbers the first residue starting from 1. Use an offset to be added or subtracted (if negative) to each number.
+		When creating output for plotting, we assume the first residue is numbered 1. This allows one to add an offset to be added or subtracted (if negative) to each number.
 	-g
 		Treat gaps as a valid character
 	-n base
@@ -33,7 +35,7 @@ The flags are:
 If you have a reference sequence, the compatibility of each base/residue will be calculated and printed out.
 
 OUTPUT
-Output is written to the standard output, which you probably do not want. Catch the output on the command line or use the -o option to send it to a file.
+Output is written to the standard output, which you probably do not want. Catch the output on the command line with a redirection or add a second filename which will be the output filename.
 
 The format is .csv with quoted heading for the columns. It can be eaten with read.csv in R or imported straight into excel. Gnuplot also knows what to do with it.
 
