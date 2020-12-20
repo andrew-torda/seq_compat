@@ -63,3 +63,6 @@ Sequences are read by the `seq` package. This is used by the other programs. `se
 
 ## Precision
 This is not a regret. All the calculations are done in single precision. That is fine and accurate enough for us. It does mean that the code is full of `float32` casts.
+
+## Memory layout
+I suspect the code would be faster if the residues were stored column-major, not row-major.
