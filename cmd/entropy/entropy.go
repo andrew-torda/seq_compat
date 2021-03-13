@@ -41,6 +41,11 @@ func main() {
 			outfile = flag.Arg(1)
 		}
 	}
+	if flag.NArg() == 0 {
+		fmt.Fprintln (os.Stderr, "Too few arguments")
+		usage()
+		os.Exit(ExitFailure)
+	}
 
 	if err := entropy.Mymain(&flags, infile, outfile); err != nil {
 		fmt.Fprintln(os.Stderr, err)
