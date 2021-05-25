@@ -317,6 +317,10 @@ func Readfile(fname string, s_opts *Options) (*SeqGrp, error) {
 	}
 
 	if err := ReadFasta(rdr, seqgrp, s_opts); err != nil {
+		if fname == "" {
+			fname = "standard input"
+		}
+		err = fmt.Errorf ("Reading from %s: %w", fname, err)
 		return seqgrp, err
 	}
 

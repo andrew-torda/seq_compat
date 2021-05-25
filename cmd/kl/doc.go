@@ -32,5 +32,8 @@ The two input files must be from multiple sequence alignments. The sequences wit
 
 The Kullbach-Leibler distance, (kl= sum (p_a * log (p_a/q_a))) is fundamentally asymmetric, so we calculate the results using one file as the p distribution and also as the q distribution. If p_a or q_a is zero for some amino acid/nucleotide type, there is no correct behaviour. We take a pessimistic view. If you have N sequences and symbol "a" does not appear in one distribution, we take its frequency to be 1/(N+1). That is, if you have a 100 sequences and you do not see type X, we say the probability of X occurring is 1/101. The rationale is that this is the best estimate. If you have 10000 sequences and do not see symbol X, you can say that its probability is 1/10001. If you have 10 sequences, you cannot be so sure, so its probability becomes 1/11.
 
+MISSING: to do
+I think it might be helpful if one could name a reference seqeunce and print it out in a column next to the numerical outputs.
+
 */
 package main
