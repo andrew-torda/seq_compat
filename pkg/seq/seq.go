@@ -83,7 +83,9 @@ func (s seq) GetSeq() []byte { return s.seq }
 func (s seq) Cmmt() string { return s.cmmt }
 
 // Function SetCmmt sets the comment string to something new
-func (s seq) SetCmmt(newCmmt string) { s.cmmt = newCmmt }
+func (s *seq) SetCmmt(newCmmt string) {
+	s.cmmt = newCmmt
+}
 
 // Function Len
 func (s seq) Len() int { return len(s.seq) }
