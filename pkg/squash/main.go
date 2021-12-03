@@ -15,7 +15,7 @@ func MyMain(seqstring, infile, outfile string) int {
 
 	seqgrp, err := seq.Readfile(infile, s_opts)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, err, "(the inputfile)")
 		return ExitFailure
 	}
 	var ndxref int
