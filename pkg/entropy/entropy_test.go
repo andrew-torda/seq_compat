@@ -6,6 +6,7 @@ import (
 	. "github.com/andrew-torda/seq_compat/pkg/entropy"
 	"github.com/andrew-torda/seq_compat/pkg/seq"
 	"github.com/andrew-torda/seq_compat/pkg/seq/common"
+
 	"math"
 	"os"
 	"testing"
@@ -92,7 +93,7 @@ func Test2(t *testing.T) {
 }
 
 // testChimera see what happens if we write a chimera format file
-/*  This is commented out while I try to think of a way to test the output.
+//  This is commented out while I try to think of a way to test the output.
 func TestChimera(t *testing.T) {
 	var fname string
 	var err error
@@ -101,13 +102,12 @@ func TestChimera(t *testing.T) {
 	}
 	defer os.Remove(fname)
 	var tmpoutName string
-	if tmpout, err := ioutil.TempFile("", "del_me"); err != nil {
+	if tmpout, err := os.CreateTemp(".", "del_me"); err != nil {
 		t.Fatal("Fail making test file", err.Error())
 	} else {
 		tmpoutName = tmpout.Name()
 		defer os.Remove(tmpoutName)
 		tmpout.Close()
-		fmt.Println ("tmpout is ", tmpoutName)
 	}
 	flags := CmdFlag{
 		Chimera: tmpoutName,
@@ -116,4 +116,3 @@ func TestChimera(t *testing.T) {
 		t.Fatal("bust with chimera file", err)
 	}
 }
-*/
