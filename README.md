@@ -5,14 +5,15 @@ It works under linux, windows and maybe on a mac. I don't have a mac
 # Installation
 
 Is go installed on your machine ? If so,
-```
-go get github.com/andrew-torda/seq_compat
+`go get github.com/andrew-torda/seq_compat`
 If you then 
-` go build ./...
- go test ./...`
+```
+ go build ./...
+ go test ./...
+```
 You will end up with an executable in each of the directories under `cmd`.
 Doing
- go install ./...
+` go install ./...`
 Will put these executables somewhere.
 otherwise,
  git clone https://github.com/andrew-torda/seq_compat.git
