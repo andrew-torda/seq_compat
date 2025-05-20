@@ -54,7 +54,7 @@ There are a few commands. These live under `cmd`. They are very short and quickl
 
 # To Do
 
-Add an option for chimera output.
+In the entropy program, we can write entropy to a file in chimera format. Add an option to write the presence/absence to a file for chimera. Sometimes you want to see which parts of a structure are unique.
 
 # Implementation
 Sequences are read by the `seq` package. This is used by the other programs. `seq` has a `seq` structure and a `seqgrp` structure. `seq`s have a comment (utf-8 strings) and a sequence (a set of ascii bytes).
