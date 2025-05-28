@@ -7,9 +7,9 @@
 //
 //	*sIn = s
 //}
-	
+
 // It is short and cute, but is slower and uses a lot of memory.
-	
+
 package white
 
 // Remove acts on a pointer to a byte slice, in place and removes all the
@@ -63,7 +63,7 @@ white:
 		for ; i < len(s); i++ {
 			mustclean = true
 			if asciiSpace[s[i]] { // end of block
-				ltmp := i - start // lengt of block to copy
+				ltmp := i - start // length of block to copy
 				copy(s[dst:dst+ltmp], s[start:i+1])
 				dst = dst + ltmp
 				mustclean = false
