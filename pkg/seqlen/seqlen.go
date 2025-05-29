@@ -76,6 +76,7 @@ func writeLen(cmdArgs CmdArgs, outCntFile io.Writer) error {
 			return err
 		}
 	}
+	csvDst.Flush()
 
 	return nil
 }
