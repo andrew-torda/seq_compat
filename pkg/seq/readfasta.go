@@ -25,8 +25,9 @@ import (
 	"fmt"
 	"io"
 	"sync"
-	"github.com/andrew-torda/seq_compat/pkg/seq/common"
+
 	"github.com/andrew-torda/seq_compat/pkg/numseq"
+	"github.com/andrew-torda/seq_compat/pkg/seq/common"
 	"github.com/andrew-torda/seq_compat/pkg/white"
 )
 
@@ -57,7 +58,8 @@ type lexer struct {
 	rangeEnd   int    // from seq options. Zero means keep everything.
 	term       byte   // terminator of comments or sequences
 	memtype    byte   // diff length sequences, same or a range from each seq
-	RmvGapsRd bool   // copied from s_opts
+	RmvGapsRd  bool   // copied from s_opts
+	ZeroLenOK  bool   // from s_opts, zero length seqs OK
 	notfirst   bool   // Not the first call
 }
 
@@ -183,15 +185,17 @@ func seqFn(l *lexer) stateFn {
 
 	white.Remove(&item.data)
 	if l.RmvGapsRd {
-		white.CharRemove (&item.data, common.GapChar)
+		white.CharRemove(&item.data, common.GapChar)
 	}
 	l.seq = append(l.seq, item.data...)
 	complete := item.complete
 	l.itempool.Put(item)
 	if complete {
 		if len(l.seq) == 0 {
-			l.err = errors.New("Zero length sequence after" + l.cmmt)
-			return nil
+			if !l.ZeroLenOK { // zero length seqs usually not OK
+				l.err = errors.New("Zero length sequence after" + l.cmmt)
+				return nil
+			}
 		}
 
 		if !l.notfirst && (l.memtype == sameLen || l.memtype == withRange) {
@@ -291,9 +295,10 @@ func ReadFasta(rdr io.ReadSeeker, seqgrp *SeqGrp, s_opts *Options) (err error) {
 	}
 	l := lexer{
 		rdr: rdr, ichan: make(chan *item), seqgrp: seqgrp, term: NL,
-		RmvGapsRd: s_opts.RmvGapsRd,
+		RmvGapsRd:  s_opts.RmvGapsRd,
 		rangeStart: s_opts.RangeStart, rangeEnd: s_opts.RangeEnd,
-		memtype: memtype(s_opts),
+		ZeroLenOK: s_opts.ZeroLenOK,
+		memtype:   memtype(s_opts),
 	}
 
 	go l.next()

@@ -53,8 +53,7 @@ func nothing ( x interface{}){}
 // writeLen reads a sequence file, visits each sequence in turn
 // and writes the length (and species) to an output (csv) file.
 func writeLen(cmdArgs CmdArgs, outCntFile io.Writer) error {
-
-	s_opts := &seq.Options{RmvGapsRd: true}
+	s_opts := &seq.Options{RmvGapsRd: true, ZeroLenOK: true}
 	if cmdArgs.IgnrSeqLen == true {
 		s_opts.DiffLenSeq = true
 	}
@@ -70,14 +69,12 @@ func writeLen(cmdArgs CmdArgs, outCntFile io.Writer) error {
 		cmmt := seq.Cmmt()
 		name, species := nameSpecies(cmmt)
 		s3 := [3]string{name, len, species}
-		ss := s3[:]
 
-		if err := csvDst.Write(ss); err != nil {
+		if err := csvDst.Write(s3[:]); err != nil {
 			return err
 		}
 	}
 	csvDst.Flush()
-
 	return nil
 }
 

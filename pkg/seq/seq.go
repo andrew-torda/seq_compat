@@ -51,10 +51,12 @@ const (
 type Options struct {
 	RangeStart int  // When reading, keep only range from Start to End.
 	RangeEnd   int  // If Start and End are zero, keep everything.
-	DiffLenSeq bool // false, unless we expect sequences to be different lengths
+	DiffLenSeq bool // false, unless different-length sequences OK
+	ZeroLenOk  bool // Zero length sequences should be kept
 	DryRun     bool // Do not write any files
 	RmvGapsRd  bool // Remove gaps on reading. Usually not.
 	RmvGapsWrt bool // Remove gaps on output
+	ZeroLenOK  bool // Zero-length sequences are allowed
 }
 
 // Constants
@@ -64,15 +66,15 @@ const cmmt_char byte = '>' // and this introduces comments in fasta format
 // such as what type (protein, nucleotide) and the number of symbols
 // that have been used.
 type SeqGrp struct {
-	symUsed  [MaxSym]bool  // which symbols are actually used
-	mapping  [MaxSym]uint8 // mapping['C'] tells me the index used for C
-	revmap   []uint8       // revmap[2] tells me the character in place 2
-	seqs     []seq
-	counts   *matrix.FMatrix2d
-	gapcnt   []int32 // count of gaps at each position
-	stype    SeqType
-	usedKnwn bool // Do we know how many symbols are used ?
-	freqKnwn bool // are counts of symbols converted to fractional probabilities ?
+	symUsed   [MaxSym]bool  // which symbols are actually used
+	mapping   [MaxSym]uint8 // mapping['C'] tells me the index used for C
+	revmap    []uint8       // revmap[2] tells me the character in place 2
+	seqs      []seq
+	counts    *matrix.FMatrix2d
+	gapcnt    []int32 // count of gaps at each position
+	stype     SeqType
+	usedKnwn  bool // Do we know how many symbols are used ?
+	freqKnwn  bool // are counts of symbols converted to fractional probabilities ?
 }
 
 // Function GetSeq returns the sequence as the original byte slice
@@ -120,7 +122,9 @@ func (s seq) Gene_id() (gene_id string) {
 // Species tries to return the organism from which a sequence
 // comes. Actually, it just looks in the comment line for a string
 // between square brackets and returns it. Given
-//     > xyz.123 comment here [  homo sapiens]
+//
+//	> xyz.123 comment here [  homo sapiens]
+//
 // it should return "homo sapiens" with leading and trailing white
 // space removed.
 func (s seq) Species() (species string, ok bool) {
