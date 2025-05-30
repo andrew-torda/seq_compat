@@ -667,6 +667,25 @@ func TestGetNSeq(t *testing.T) {
 	}
 }
 
+// TestZeroLen checks that zero length sequences provoke an
+// error unless overridden
+func TestZeroLen (t *testing.T) {
+	sdata := ">s1\nacd--\n>s2\n-----\n> s3\nefghi\n"
+	var seqgrp SeqGrp
+	var s_opts = &Options{
+		RmvGapsRd: true,
+	}
+
+	if err := ReadFasta (strings.NewReader(sdata), &seqgrp, s_opts); err == nil {
+		t.Fatal("TestZeroLen should provoke error on zero length seq")
+	}
+	s_opts.ZeroLenOK = true
+	s_opts.DiffLenSeq = true
+	if err := ReadFasta (strings.NewReader(sdata), &seqgrp, s_opts); err != nil {
+		t.Fatal("TestZeroLen should have ignored zero length", err)
+	}
+}
+
 // TestSeqInfo tests some seq manipulation functions
 func TestSeqInfo(t *testing.T) {
 	ss := []string{"aa", "bb", "cc"}
