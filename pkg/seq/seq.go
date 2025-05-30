@@ -16,7 +16,6 @@ package seq
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -349,7 +348,7 @@ func WriteToF(outseq_fname string, seq_set []seq, s_opts *Options) (err error) {
 	var outfile_fp io.Writer
 	switch {
 	case s_opts.DryRun:
-		outfile_fp = ioutil.Discard
+		outfile_fp = io.Discard
 	case outseq_fname == nilstring:
 		outfile_fp = os.Stdout
 	default:

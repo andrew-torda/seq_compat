@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -307,7 +306,7 @@ func TestEmpty(t *testing.T) {
 		"rubbish",
 	}
 	for _, content := range bad_contents {
-		f_tmp, err := ioutil.TempFile("", "_del_me_testing")
+		f_tmp, err := os.CreateTemp("", "_del_me_testing")
 		if err != nil {
 			t.Fatal("tempfile", f_tmp, err)
 		}
@@ -458,7 +457,7 @@ AEG--`,
 }
 
 func wrtTmp(s string) (string, error) {
-	f_tmp, err := ioutil.TempFile("", "_del_me_testing")
+	f_tmp, err := os.CreateTemp("", "_del_me_testing")
 	if err != nil {
 		return "", fmt.Errorf("tempfile fail")
 	}
