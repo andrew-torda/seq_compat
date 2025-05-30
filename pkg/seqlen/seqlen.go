@@ -9,7 +9,6 @@ package seqlen
 
 import (
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,21 +33,17 @@ type CmdArgs struct {
 }
 
 // nameSpecies gets the name and species from a comment
+// Name is just the first word in the comment.
+// Species is any text between [ and ].
 func nameSpecies(cmmt string) (name string, species string) {
-	t := strings.Fields(cmmt)
-	name = t[0]
-	species = ""
-	_, after, found1 := strings.Cut(cmmt, "[")
-	if found1 {
-		before, _, found2 := strings.Cut(after, "]")
-		if found2 {
+	name = strings.Fields(cmmt) [0] // Get the first word
+	if _, after, found1 := strings.Cut(cmmt, "["); found1 {
+		if before, _, found2 := strings.Cut(after, "]"); found2 {
 			species = before
 		}
 	}
 	return name, species
 }
-func breaker() {}
-func nothing ( x interface{}){}
 
 // writeLen reads a sequence file, visits each sequence in turn
 // and writes the length (and species) to an output (csv) file.
@@ -75,22 +70,22 @@ func writeLen(cmdArgs CmdArgs, outCntFile io.Writer) error {
 		}
 	}
 	csvDst.Flush()
+
+	if cmdArgs.OutSeqFname != ""{
+		osf:= cmdArgs.OutSeqFname // readability
+		if err := seq.WriteToF(osf, seqgrp.SeqSlc(), s_opts); err != nil{
+			e := fmt.Errorf("csv file OK, but error writing seqs: %w", err)
+			return e
+		}
+	}
 	return nil
 }
 
-// Mymain sets up files for reading and writing
+// Mymain sets up files for reading and writing.
+// Must do a bit of work so it can also read from standard input.
 func Mymain(cmdArgs CmdArgs) error {
-	fmt.Println("main inseq", cmdArgs.InSeqFname, "outcnt",
-		cmdArgs.OutCntFname, "outseq ", cmdArgs.OutSeqFname)
-	var wrtNewSeqs bool // Should we write sequences without gaps
-	if cmdArgs.OutSeqFname != "" {
-		wrtNewSeqs = true
-		return errors.New("Function to write new files not implemented. Try again later")
-	}
-	// inconsistent .. we open the writer here and the read
-	// in the looping function
 	var outCntFile io.WriteCloser
-	if cmdArgs.OutCntFname == "-" {
+	if cmdArgs.OutCntFname == "-" { // Sort out the outputfile
 		outCntFile = os.Stdout
 	} else {
 		var err error
@@ -99,10 +94,6 @@ func Mymain(cmdArgs CmdArgs) error {
 			return fmt.Errorf("output count file: %w", err)
 		}
 		defer outCntFile.Close()
-	}
-
-	if wrtNewSeqs {
-		return errors.New("No way to get here")
 	}
 
 	if err := writeLen(cmdArgs, outCntFile); err != nil {
